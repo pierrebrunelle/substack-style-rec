@@ -428,11 +428,3 @@ TWELVELABS_API_KEY=tlk_xxx
 TWELVELABS_INDEX_ID=xxx
 PIXELTABLE_HOME=./data     # or cloud config
 ```
-
-## Questions for PixelTable Team
-
-1. Can PixelTable call Twelve Labs Marengo 3.0 embeddings directly as a computed column? Or should embeddings be pre-computed and stored?
-2. Can `.similarity()` results be filtered by conditions (e.g., `creator_id IN [...]`)?
-3. Should recommendation explanation generation happen in PixelTable computed columns or in the FastAPI layer?
-4. Deployment: Where will the PixelTable server be hosted? (Render, Railway, EC2, etc.)
-5. Can Analyze API attribute extraction be integrated as a PixelTable UDF?

@@ -22,7 +22,7 @@ export function Nav() {
           </svg>
         </div>
         <span className="text-sm font-semibold tracking-tight text-[var(--text-primary)]">
-          SubstackTV
+          CuratorAI
         </span>
       </Link>
 

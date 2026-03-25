@@ -11,7 +11,7 @@ interface UserStateContextValue extends UserState {
   reset: () => void;
 }
 
-const STORAGE_KEY = "substack-rec-user-state";
+const STORAGE_KEY = "curatorai-user-state";
 
 const defaultState: UserState = {
   subscriptions: [

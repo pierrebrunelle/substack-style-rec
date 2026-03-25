@@ -23,7 +23,7 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "Substack TV — AI-Powered Recommendations",
+  title: "CuratorAI — AI-Powered Video Recommendations",
   description:
     "Netflix-style video discovery powered by TwelveLabs multimodal understanding. Semantic recommendations, cross-creator exploration, and explainable suggestions.",
 };
