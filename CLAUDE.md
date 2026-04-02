@@ -14,12 +14,12 @@ npm run lint         # ESLint (flat config, eslint.config.mjs)
 npm start            # Serve production build
 
 # Backend (run from backend/ directory)
-pip install -e .                       # Install Python deps
-python setup_pixeltable.py             # Initialize PixelTable schema (idempotent)
-python ingest.py                       # Load data from TL index (metadata + text embeddings)
-python ingest.py --with-videos         # Also include video file paths for segment embeddings
-python download_videos.py              # Download video files from YouTube (yt-dlp)
-python main.py                         # Start FastAPI on :8000
+uv sync                                # Install deps from lockfile into .venv
+uv run setup_pixeltable.py             # Initialize PixelTable schema (idempotent)
+uv run ingest.py                       # Load data from TL index (metadata + text embeddings)
+uv run ingest.py --with-videos         # Also include video file paths for segment embeddings
+uv run download_videos.py              # Download video files from YouTube (yt-dlp)
+uv run main.py                         # Start FastAPI on :8000
 ```
 
 No test framework is configured yet.

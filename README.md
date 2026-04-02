@@ -89,7 +89,6 @@ npm run dev                    # localhost:3000
 
 ```bash
 cd backend
-pip install pixeltable fastapi "uvicorn[standard]" python-dotenv twelvelabs httpx
 
 # Add your credentials
 cat > .env.local << 'EOF'
@@ -97,9 +96,10 @@ TWELVELABS_API_KEY=tlk_your_key_here
 TWELVELABS_INDEX_ID=69c37b6708cd679f8afbd748
 EOF
 
-python setup_pixeltable.py     # Create schema (idempotent)
-python ingest.py               # Load 25 videos from TL index
-python main.py                 # FastAPI on localhost:8000
+uv sync                        # Install deps from lockfile
+uv run setup_pixeltable.py     # Create schema (idempotent)
+uv run ingest.py               # Load 25 videos from TL index
+uv run main.py                 # FastAPI on localhost:8000
 ```
 
 ### 3. Connect frontend to backend
@@ -115,10 +115,10 @@ NEXT_PUBLIC_API_BASE=http://localhost:8000/api
 For full multimodal video embeddings on 30-second segments:
 
 ```bash
-pip install yt-dlp
-python download_videos.py              # Download video files (~9 GB)
-python ingest.py --with-videos         # Backfill video file paths
-python setup_pixeltable.py             # Creates segment view + video embedding index
+uv sync --extra download               # Install yt-dlp
+uv run download_videos.py              # Download video files (~9 GB)
+uv run ingest.py --with-videos         # Backfill video file paths
+uv run setup_pixeltable.py             # Creates segment view + video embedding index
 ```
 
 This generates 1,409 video segment embeddings via Marengo 3.0 -- each segment captures actual visual, audio, and speech content.
