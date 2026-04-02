@@ -7,6 +7,7 @@ Usage:
     pip install yt-dlp
     python download_videos.py
 """
+
 import csv
 import subprocess
 import sys
@@ -48,11 +49,16 @@ def main():
             subprocess.run(
                 [
                     "yt-dlp",
-                    "--js-runtimes", "node",
-                    "-f", "bestvideo[vcodec^=avc1][height<=720]+bestaudio[ext=m4a]/bestvideo[height<=720]+bestaudio/best[height<=720]",
-                    "--merge-output-format", "mp4",
-                    "--postprocessor-args", "ffmpeg:-c:v libx264 -crf 23 -preset fast",
-                    "-o", str(output_path),
+                    "--js-runtimes",
+                    "node",
+                    "-f",
+                    "bestvideo[vcodec^=avc1][height<=720]+bestaudio[ext=m4a]/bestvideo[height<=720]+bestaudio/best[height<=720]",
+                    "--merge-output-format",
+                    "mp4",
+                    "--postprocessor-args",
+                    "ffmpeg:-c:v libx264 -crf 23 -preset fast",
+                    "-o",
+                    str(output_path),
                     "--no-playlist",
                     url,
                 ],
@@ -63,7 +69,7 @@ def main():
         except subprocess.CalledProcessError as e:
             print(f"           FAILED: {e}")
         except subprocess.TimeoutExpired:
-            print(f"           TIMEOUT after 600s")
+            print("           TIMEOUT after 600s")
 
     print(f"\nDone. Videos saved to {OUTPUT_DIR}")
 

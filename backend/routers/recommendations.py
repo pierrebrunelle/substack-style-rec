@@ -1,4 +1,5 @@
 """Recommendation endpoints: for-you, similar, creator-catalog."""
+
 import logging
 from collections import defaultdict
 
@@ -40,7 +41,10 @@ def _apply_diversity(candidates: list[dict], max_per_creator: int = 2) -> list[d
 
 
 def _similarity_candidates(
-    videos_t, reference_title: str, exclude_ids: set[str], limit: int,
+    videos_t,
+    reference_title: str,
+    exclude_ids: set[str],
+    limit: int,
     creator_id: str | None = None,
 ) -> list[dict]:
     """Query Marengo .similarity() on title, optionally filtered by creator."""
@@ -65,14 +69,19 @@ def _matched_attrs(source: dict, target: dict) -> list[str]:
         matched.append(f"{target['style']} format")
     if source.get("tone") and source["tone"] == target.get("tone"):
         matched.append(f"{target['tone']} tone")
-    for t in list((set(source.get("topic") or []) & set(target.get("topic") or [])))[:2]:
+    for t in list((set(source.get("topic") or []) & set(target.get("topic") or [])))[
+        :2
+    ]:
         matched.append(t)
     return matched
 
 
 def _to_rec(
-    candidate: dict, creators_map: dict, source_video: dict,
-    rec_source: str, subscriptions: set[str],
+    candidate: dict,
+    creators_map: dict,
+    source_video: dict,
+    rec_source: str,
+    subscriptions: set[str],
 ) -> RecommendationResponse:
     return RecommendationResponse(
         video=_build_video_response(candidate, creators_map),
@@ -86,6 +95,7 @@ def _to_rec(
 # ---------------------------------------------------------------------------
 # POST /api/recommendations/for-you
 # ---------------------------------------------------------------------------
+
 
 @router.post("/for-you", response_model=RecommendationsResponse)
 def for_you(body: ForYouRequest):
@@ -103,21 +113,29 @@ def for_you(body: ForYouRequest):
         if subscriptions:
             sub_vids = sorted(
                 [v for v in unwatched if v.get("creator_id") in subscriptions],
-                key=lambda v: v.get("upload_date", ""), reverse=True,
+                key=lambda v: v.get("upload_date", ""),
+                reverse=True,
             )
             other = sorted(
                 [v for v in unwatched if v.get("creator_id") not in subscriptions],
-                key=lambda v: v.get("upload_date", ""), reverse=True,
+                key=lambda v: v.get("upload_date", ""),
+                reverse=True,
             )
             combined = sub_vids + other
         else:
-            combined = sorted(unwatched, key=lambda v: v.get("upload_date", ""), reverse=True)
+            combined = sorted(
+                unwatched, key=lambda v: v.get("upload_date", ""), reverse=True
+            )
 
         recs = [
             RecommendationResponse(
-                video=_build_video_response(v, creators_map), score=None,
-                reason="New to you", matched_attributes=[],
-                source="subscription" if v.get("creator_id") in subscriptions else "discovery",
+                video=_build_video_response(v, creators_map),
+                score=None,
+                reason="New to you",
+                matched_attributes=[],
+                source="subscription"
+                if v.get("creator_id") in subscriptions
+                else "discovery",
             )
             for v in _apply_diversity(combined)[: body.limit]
         ]
@@ -133,12 +151,18 @@ def for_you(body: ForYouRequest):
         w_vid = by_id.get(wid)
         if not w_vid:
             continue
-        for c in _similarity_candidates(videos_t, w_vid["title"], watched, body.limit * 3):
-            if c["id"] not in candidate_scores or c.get("score", 0) > candidate_scores[c["id"]].get("score", 0):
+        for c in _similarity_candidates(
+            videos_t, w_vid["title"], watched, body.limit * 3
+        ):
+            if c["id"] not in candidate_scores or c.get("score", 0) > candidate_scores[
+                c["id"]
+            ].get("score", 0):
                 c["_source_video"] = w_vid
                 candidate_scores[c["id"]] = c
 
-    ranked = sorted(candidate_scores.values(), key=lambda x: x.get("score", 0), reverse=True)
+    ranked = sorted(
+        candidate_scores.values(), key=lambda x: x.get("score", 0), reverse=True
+    )
     for c in ranked:
         vid = by_id.get(c["id"], {})
         c["topic"] = vid.get("topic")
@@ -147,7 +171,9 @@ def for_you(body: ForYouRequest):
 
     # 70/30 subscription vs discovery
     sub = _apply_diversity([c for c in ranked if c.get("creator_id") in subscriptions])
-    disc = _apply_diversity([c for c in ranked if c.get("creator_id") not in subscriptions])
+    disc = _apply_diversity(
+        [c for c in ranked if c.get("creator_id") not in subscriptions]
+    )
 
     n_sub = max(1, int(body.limit * 0.7))
     n_disc = body.limit - n_sub
@@ -158,7 +184,9 @@ def for_you(body: ForYouRequest):
         final_sub = sub[: n_sub + (n_disc - len(final_disc))]
 
     recs = [
-        _to_rec(c, creators_map, c.get("_source_video", {}), "subscription", subscriptions)
+        _to_rec(
+            c, creators_map, c.get("_source_video", {}), "subscription", subscriptions
+        )
         for c in final_sub
     ] + [
         _to_rec(c, creators_map, c.get("_source_video", {}), "discovery", subscriptions)
@@ -170,6 +198,7 @@ def for_you(body: ForYouRequest):
 # ---------------------------------------------------------------------------
 # POST /api/recommendations/similar
 # ---------------------------------------------------------------------------
+
 
 @router.post("/similar", response_model=RecommendationsResponse)
 def similar(body: SimilarRequest):
@@ -186,15 +215,22 @@ def similar(body: SimilarRequest):
 
     ref = ref_rows[0]
     candidates = _similarity_candidates(
-        videos_t, ref["title"], set(body.watch_history) | {body.video_id}, body.limit * 3,
+        videos_t,
+        ref["title"],
+        set(body.watch_history) | {body.video_id},
+        body.limit * 3,
     )
     _attach_attrs(candidates, videos_t)
     candidates = _apply_diversity(candidates)
 
     recs = [
         _to_rec(
-            c, creators_map, ref,
-            "subscription" if c.get("creator_id") == ref.get("creator_id") else "discovery",
+            c,
+            creators_map,
+            ref,
+            "subscription"
+            if c.get("creator_id") == ref.get("creator_id")
+            else "discovery",
             set(),
         )
         for c in candidates[: body.limit]
@@ -206,6 +242,7 @@ def similar(body: SimilarRequest):
 # POST /api/recommendations/creator-catalog
 # ---------------------------------------------------------------------------
 
+
 @router.post("/creator-catalog", response_model=CreatorCatalogResponse)
 def creator_catalog(body: CreatorCatalogRequest):
     videos_t = pxt.get_table(f"{config.APP_NAMESPACE}.videos")
@@ -216,22 +253,29 @@ def creator_catalog(body: CreatorCatalogRequest):
 
     info = creators_map[body.creator_id]
     creator_resp = CreatorResponse(
-        id=body.creator_id, name=info["name"],
-        avatar_url=info["avatar_url"], description=info["description"],
+        id=body.creator_id,
+        name=info["name"],
+        avatar_url=info["avatar_url"],
+        description=info["description"],
         video_count=info["video_count"],
     )
 
     # Popular: this creator's videos sorted by recency
     popular_rows = list(
-        _select_videos(videos_t, videos_t.where(videos_t.creator_id == body.creator_id)).collect()
+        _select_videos(
+            videos_t, videos_t.where(videos_t.creator_id == body.creator_id)
+        ).collect()
     )
     _attach_attrs(popular_rows, videos_t)
     popular_rows.sort(key=lambda r: r.get("upload_date", ""), reverse=True)
 
     popular = [
         RecommendationResponse(
-            video=_build_video_response(r, creators_map), score=None,
-            reason="Popular from this creator", matched_attributes=[], source="subscription",
+            video=_build_video_response(r, creators_map),
+            score=None,
+            reason="Popular from this creator",
+            matched_attributes=[],
+            source="subscription",
         )
         for r in popular_rows[: body.limit]
     ]
@@ -241,27 +285,40 @@ def creator_catalog(body: CreatorCatalogRequest):
     if body.watch_history:
         all_rows = list(_select_videos(videos_t).collect())
         _attach_attrs(all_rows, videos_t)
-        watched_by_id = {v["id"]: v for v in all_rows if v["id"] in set(body.watch_history)}
+        watched_by_id = {
+            v["id"]: v for v in all_rows if v["id"] in set(body.watch_history)
+        }
 
         if watched_by_id:
             best: dict[str, dict] = {}
             for ref in list(watched_by_id.values())[-3:]:
                 for c in _similarity_candidates(
-                    videos_t, ref["title"], set(), body.limit, creator_id=body.creator_id,
+                    videos_t,
+                    ref["title"],
+                    set(),
+                    body.limit,
+                    creator_id=body.creator_id,
                 ):
-                    if c["id"] not in best or c.get("score", 0) > best[c["id"]].get("score", 0):
+                    if c["id"] not in best or c.get("score", 0) > best[c["id"]].get(
+                        "score", 0
+                    ):
                         best[c["id"]] = c
 
-            ranked = sorted(best.values(), key=lambda x: x.get("score", 0), reverse=True)
+            ranked = sorted(
+                best.values(), key=lambda x: x.get("score", 0), reverse=True
+            )
             _attach_attrs(ranked, videos_t)
             recommended = [
                 RecommendationResponse(
                     video=_build_video_response(r, creators_map),
                     score=round(r.get("score", 0), 4) if r.get("score") else None,
                     reason="Recommended based on your interests",
-                    matched_attributes=[], source="subscription",
+                    matched_attributes=[],
+                    source="subscription",
                 )
                 for r in ranked[: body.limit]
             ]
 
-    return CreatorCatalogResponse(creator=creator_resp, recommended=recommended, popular=popular)
+    return CreatorCatalogResponse(
+        creator=creator_resp, recommended=recommended, popular=popular
+    )

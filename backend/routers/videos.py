@@ -1,4 +1,5 @@
 """Video listing and detail endpoints."""
+
 import logging
 from typing import Optional
 
@@ -16,7 +17,16 @@ from models import (
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["videos"])
 
-VIDEO_FIELDS = ("id", "title", "creator_id", "category", "duration", "thumbnail_url", "hls_url", "upload_date")
+VIDEO_FIELDS = (
+    "id",
+    "title",
+    "creator_id",
+    "category",
+    "duration",
+    "thumbnail_url",
+    "hls_url",
+    "upload_date",
+)
 
 
 def _select_videos(videos_t, query=None):
@@ -64,7 +74,8 @@ def _build_video_response(row: dict, creators_map: dict[str, dict]) -> VideoResp
         id=row["id"],
         title=row.get("title", ""),
         creator=CreatorResponse(
-            id=cid, name=cdata.get("name", ""),
+            id=cid,
+            name=cdata.get("name", ""),
             avatar_url=cdata.get("avatar_url", ""),
             description=cdata.get("description", ""),
             video_count=cdata.get("video_count", 0),
@@ -84,8 +95,18 @@ def _load_creators_map() -> dict[str, dict]:
     videos_t = pxt.get_table(f"{config.APP_NAMESPACE}.videos")
 
     creators = {
-        c["id"]: {"name": c["name"], "avatar_url": c["avatar_url"], "description": c["description"], "video_count": 0}
-        for c in creators_t.select(creators_t.id, creators_t.name, creators_t.avatar_url, creators_t.description).collect()
+        c["id"]: {
+            "name": c["name"],
+            "avatar_url": c["avatar_url"],
+            "description": c["description"],
+            "video_count": 0,
+        }
+        for c in creators_t.select(
+            creators_t.id,
+            creators_t.name,
+            creators_t.avatar_url,
+            creators_t.description,
+        ).collect()
     }
     for r in videos_t.select(videos_t.creator_id).collect():
         cid = r.get("creator_id", "")
@@ -117,7 +138,9 @@ def list_videos(
 
     return PaginatedVideosResponse(
         data=[_build_video_response(r, creators_map) for r in rows],
-        page=page, total=total, total_pages=total_pages,
+        page=page,
+        total=total,
+        total_pages=total_pages,
     )
 
 

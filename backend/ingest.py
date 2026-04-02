@@ -11,6 +11,7 @@ Usage:
     python ingest.py                # metadata only (fast)
     python ingest.py --with-videos  # include video file paths for segment embeddings
 """
+
 import argparse
 import csv
 import re
@@ -97,17 +98,21 @@ def run(with_videos: bool = False):
         if not cid or not cname or cid in seen_creators:
             continue
         seen_creators.add(cid)
-        creator_rows.append({
-            "id": cid,
-            "name": cname,
-            "avatar_url": "",
-            "description": config.CREATOR_DESCRIPTIONS.get(cid, ""),
-        })
+        creator_rows.append(
+            {
+                "id": cid,
+                "name": cname,
+                "avatar_url": "",
+                "description": config.CREATOR_DESCRIPTIONS.get(cid, ""),
+            }
+        )
 
     if creator_rows:
         logger.info("Inserting %d creators ...", len(creator_rows))
         status = creators_t.insert(creator_rows, on_error="ignore")
-        logger.info("Creators: inserted=%d, errors=%d", status.num_rows, status.num_excs)
+        logger.info(
+            "Creators: inserted=%d, errors=%d", status.num_rows, status.num_excs
+        )
 
     # -- Insert videos ---------------------------------------------------------
     video_rows: list[dict] = []
@@ -119,7 +124,9 @@ def run(with_videos: bool = False):
         cid = meta.get("creatorId")
         cname = meta.get("creatorName")
         if not cid or not cname:
-            logger.warning("Skipping video %s — missing creator metadata", tlv.get("_id"))
+            logger.warning(
+                "Skipping video %s — missing creator metadata", tlv.get("_id")
+            )
             continue
 
         row = {
@@ -144,7 +151,8 @@ def run(with_videos: bool = False):
         videos_with_files = sum(1 for r in video_rows if "video" in r)
         logger.info(
             "Inserting %d videos (%d with video files)...",
-            len(video_rows), videos_with_files,
+            len(video_rows),
+            videos_with_files,
         )
         status = videos_t.insert(video_rows, on_error="ignore")
         logger.info("Videos: inserted=%d, errors=%d", status.num_rows, status.num_excs)
@@ -152,12 +160,17 @@ def run(with_videos: bool = False):
     # -- Backfill video paths for existing rows (if re-running with --with-videos)
     if with_videos and yt_file_map:
         existing_rows = list(videos_t.select(videos_t.id).collect())
-        tl_to_yt = {tlv["_id"]: (tlv.get("user_metadata") or {}).get("youtubeId") for tlv in tl_videos}
+        tl_to_yt = {
+            tlv["_id"]: (tlv.get("user_metadata") or {}).get("youtubeId")
+            for tlv in tl_videos
+        }
         backfilled = 0
         for row in existing_rows:
             yt_id = tl_to_yt.get(row["id"])
             if yt_id and yt_id in yt_file_map:
-                videos_t.update({"video": yt_file_map[yt_id]}, where=(videos_t.id == row["id"]))
+                videos_t.update(
+                    {"video": yt_file_map[yt_id]}, where=(videos_t.id == row["id"])
+                )
                 backfilled += 1
         if backfilled:
             logger.info("Backfilled video paths for %d existing rows", backfilled)
@@ -168,7 +181,8 @@ def run(with_videos: bool = False):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ingest data from Twelve Labs index")
     parser.add_argument(
-        "--with-videos", action="store_true",
+        "--with-videos",
+        action="store_true",
         help="Include local video file paths for segment embeddings (run download_videos.py first)",
     )
     args = parser.parse_args()

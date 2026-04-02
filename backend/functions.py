@@ -1,4 +1,5 @@
 """Custom UDFs and helper functions for the recommendation engine."""
+
 import json
 import logging
 import re
@@ -15,15 +16,29 @@ logger = logging.getLogger(__name__)
 # Analyze API UDF — extracts topic/style/tone from TL-indexed videos
 # ---------------------------------------------------------------------------
 
-VALID_STYLES = frozenset({
-    "interview", "documentary", "essay", "tutorial",
-    "conversation", "analysis", "performance", "explainer",
-})
+VALID_STYLES = frozenset(
+    {
+        "interview",
+        "documentary",
+        "essay",
+        "tutorial",
+        "conversation",
+        "analysis",
+        "performance",
+        "explainer",
+    }
+)
 
-VALID_TONES = frozenset({
-    "serious", "casual", "playful", "contemplative",
-    "energetic", "analytical",
-})
+VALID_TONES = frozenset(
+    {
+        "serious",
+        "casual",
+        "playful",
+        "contemplative",
+        "energetic",
+        "analytical",
+    }
+)
 
 
 @pxt.udf
@@ -80,6 +95,7 @@ def analyze_video(video_id: str) -> dict:
 # Recommendation reason generation (spec: BACKEND_SPEC.md §Recommendation
 # Explanation Generation)
 # ---------------------------------------------------------------------------
+
 
 def generate_reason(
     source_video: dict,

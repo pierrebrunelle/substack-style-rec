@@ -7,6 +7,7 @@ Idempotent — safe to re-run without losing data. The video segment
 view and its embedding index are created automatically when video
 files have been ingested.
 """
+
 import logging
 
 import pixeltable as pxt
@@ -64,13 +65,18 @@ def setup():
     # -- Marengo 3.0 embedding index on title ---------------------------------
 
     videos.add_embedding_index(
-        "title", string_embed=marengo, idx_name="title_marengo", if_exists="ignore",
+        "title",
+        string_embed=marengo,
+        idx_name="title_marengo",
+        if_exists="ignore",
     )
     logger.info("  Marengo 3.0 embedding index on title ready")
 
     # -- Analyze API computed columns (topic, style, tone) --------------------
 
-    videos.add_computed_column(raw_attributes=analyze_video(videos.id), if_exists="ignore")
+    videos.add_computed_column(
+        raw_attributes=analyze_video(videos.id), if_exists="ignore"
+    )
     videos.add_computed_column(topic=videos.raw_attributes["topic"], if_exists="ignore")
     videos.add_computed_column(style=videos.raw_attributes["style"], if_exists="ignore")
     videos.add_computed_column(tone=videos.raw_attributes["tone"], if_exists="ignore")
@@ -83,7 +89,7 @@ def setup():
     view_name = f"{config.APP_NAMESPACE}.video_segments"
     has_video_files = False
     try:
-        has_video_files = videos.where(videos.video != None).count() > 0
+        has_video_files = videos.where(videos.video != None).count() > 0  # noqa: E711
     except Exception:
         pass
 
@@ -95,7 +101,7 @@ def setup():
             logger.info("  Creating video_segments view (30s segments)...")
             pxt.create_view(
                 view_name,
-                videos.where(videos.video != None),
+                videos.where(videos.video != None),  # noqa: E711
                 iterator=video_splitter(videos.video, duration=30),
                 if_exists="ignore",
             )
@@ -103,11 +109,16 @@ def setup():
 
         segments = pxt.get_table(view_name)
         segments.add_embedding_index(
-            "video_segment", embedding=marengo, idx_name="segment_marengo", if_exists="ignore",
+            "video_segment",
+            embedding=marengo,
+            idx_name="segment_marengo",
+            if_exists="ignore",
         )
         logger.info("  Marengo 3.0 video embedding index on segments ready")
     else:
-        logger.info("  Skipping video_segments (no video files — run download_videos.py + ingest --with-videos)")
+        logger.info(
+            "  Skipping video_segments (no video files — run download_videos.py + ingest --with-videos)"
+        )
 
     logger.info("\nSchema setup complete.")
 

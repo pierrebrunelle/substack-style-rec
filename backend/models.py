@@ -22,6 +22,7 @@ class CamelModel(BaseModel):
 # Response models (match frontend src/lib/types.ts)
 # ---------------------------------------------------------------------------
 
+
 class CreatorResponse(CamelModel):
     id: str
     name: str
@@ -60,6 +61,7 @@ class RecommendationResponse(CamelModel):
 # Paginated / list wrappers
 # ---------------------------------------------------------------------------
 
+
 class PaginatedVideosResponse(BaseModel):
     data: list[VideoResponse]
     page: int
@@ -80,6 +82,7 @@ class CreatorDetailResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Recommendation request bodies
 # ---------------------------------------------------------------------------
+
 
 class ForYouRequest(CamelModel):
     subscriptions: list[str] = Field(default_factory=list)
@@ -105,6 +108,7 @@ class RecommendationsResponse(BaseModel):
 
 class CreatorCatalogResponse(BaseModel):
     """Spec-compliant response for creator-catalog endpoint."""
+
     creator: CreatorResponse
     recommended: list[RecommendationResponse]
     popular: list[RecommendationResponse]
@@ -113,6 +117,7 @@ class CreatorCatalogResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Search
 # ---------------------------------------------------------------------------
+
 
 class SearchResultItem(BaseModel):
     video: VideoResponse

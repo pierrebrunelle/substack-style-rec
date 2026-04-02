@@ -10,16 +10,18 @@ import type { Video } from "@/lib/types";
 function SearchResults() {
   const searchParams = useSearchParams();
   const query = searchParams.get("q") || "";
-  const [videos, setVideos] = useState<Video[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [videos, setVideos] = useState<Video[] | null>(null);
 
   useEffect(() => {
-    setLoading(true);
-    const fetch = query
+    let stale = false;
+    const promise = query
       ? searchVideos(query, { limit: 20 }).then((d) => d.results.map((r) => r.video))
       : getVideos();
-    fetch.then(setVideos).finally(() => setLoading(false));
+    promise.then((v) => { if (!stale) setVideos(v); });
+    return () => { stale = true; };
   }, [query]);
+
+  const loading = videos === null;
 
   const topics = ["AI", "music", "interview", "branding", "mathematics", "creator economy"];
 

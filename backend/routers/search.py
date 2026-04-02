@@ -1,4 +1,5 @@
 """Semantic video search via PixelTable .similarity()."""
+
 import logging
 from typing import Optional
 
@@ -7,7 +8,12 @@ import pixeltable as pxt
 
 import config
 from models import SearchResponse, SearchResultItem
-from routers.videos import VIDEO_FIELDS, _attach_attrs, _build_video_response, _load_creators_map
+from routers.videos import (
+    VIDEO_FIELDS,
+    _attach_attrs,
+    _build_video_response,
+    _load_creators_map,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["search"])
