@@ -8,8 +8,7 @@
 
 import type { Video, Creator, Recommendation } from "./types";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE ?? "/api";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
 
 // ---------------------------------------------------------------------------
 // Videos
@@ -19,20 +18,28 @@ export async function getVideos(opts?: {
   category?: string;
   creatorId?: string;
 }): Promise<Video[]> {
-  const params = new URLSearchParams();
-  if (opts?.category) params.set("category", opts.category);
-  if (opts?.creatorId) params.set("creator_id", opts.creatorId);
-
-  const qs = params.toString();
-  const res = await fetch(`${API_BASE}/videos${qs ? `?${qs}` : ""}`);
-  const data = await res.json();
-  return data.data;
+  try {
+    const params = new URLSearchParams();
+    if (opts?.category) params.set("category", opts.category);
+    if (opts?.creatorId) params.set("creator_id", opts.creatorId);
+    const qs = params.toString();
+    const res = await fetch(`${API_BASE}/videos${qs ? `?${qs}` : ""}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.data;
+  } catch {
+    return [];
+  }
 }
 
 export async function getVideo(id: string): Promise<Video | null> {
-  const res = await fetch(`${API_BASE}/videos/${id}`);
-  if (!res.ok) return null;
-  return res.json();
+  try {
+    const res = await fetch(`${API_BASE}/videos/${id}`);
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -40,21 +47,30 @@ export async function getVideo(id: string): Promise<Video | null> {
 // ---------------------------------------------------------------------------
 
 export async function getCreators(): Promise<Creator[]> {
-  const res = await fetch(`${API_BASE}/creators`);
-  const data = await res.json();
-  return data.data;
+  try {
+    const res = await fetch(`${API_BASE}/creators`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.data;
+  } catch {
+    return [];
+  }
 }
 
 export async function getCreator(
   id: string,
 ): Promise<{ creator: Creator; videos: Video[] } | null> {
-  const res = await fetch(`${API_BASE}/creators/${id}`);
-  if (!res.ok) return null;
-  return res.json();
+  try {
+    const res = await fetch(`${API_BASE}/creators/${id}`);
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
-// Recommendations (PixelTable backend only)
+// Recommendations
 // ---------------------------------------------------------------------------
 
 export async function getForYouRecommendations(
@@ -62,14 +78,18 @@ export async function getForYouRecommendations(
   watchHistory: string[],
   limit = 10,
 ): Promise<Recommendation[]> {
-  const res = await fetch(`${API_BASE}/recommendations/for-you`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ subscriptions, watchHistory, limit }),
-  });
-  if (!res.ok) return [];
-  const data = await res.json();
-  return data.recommendations;
+  try {
+    const res = await fetch(`${API_BASE}/recommendations/for-you`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subscriptions, watchHistory, limit }),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.recommendations;
+  } catch {
+    return [];
+  }
 }
 
 export async function getSimilarVideos(
@@ -77,14 +97,18 @@ export async function getSimilarVideos(
   watchHistory: string[],
   limit = 6,
 ): Promise<Recommendation[]> {
-  const res = await fetch(`${API_BASE}/recommendations/similar`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ videoId, watchHistory, limit }),
-  });
-  if (!res.ok) return [];
-  const data = await res.json();
-  return data.recommendations;
+  try {
+    const res = await fetch(`${API_BASE}/recommendations/similar`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ videoId, watchHistory, limit }),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.recommendations;
+  } catch {
+    return [];
+  }
 }
 
 export async function getCreatorCatalog(
@@ -92,29 +116,36 @@ export async function getCreatorCatalog(
   watchHistory: string[],
   limit = 20,
 ): Promise<Recommendation[]> {
-  const res = await fetch(`${API_BASE}/recommendations/creator-catalog`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ creatorId, watchHistory, limit }),
-  });
-  if (!res.ok) return [];
-  const data = await res.json();
-  return data.recommended ?? data.recommendations ?? [];
+  try {
+    const res = await fetch(`${API_BASE}/recommendations/creator-catalog`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ creatorId, watchHistory, limit }),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.recommended ?? data.recommendations ?? [];
+  } catch {
+    return [];
+  }
 }
 
 // ---------------------------------------------------------------------------
-// Search (PixelTable backend only)
+// Search
 // ---------------------------------------------------------------------------
 
 export async function searchVideos(
   query: string,
   opts?: { creatorId?: string; limit?: number },
 ): Promise<{ query: string; results: { video: Video; score: number }[] }> {
-  const params = new URLSearchParams({ q: query });
-  if (opts?.creatorId) params.set("creator_id", opts.creatorId);
-  if (opts?.limit) params.set("limit", String(opts.limit));
-
-  const res = await fetch(`${API_BASE}/search?${params}`);
-  if (!res.ok) return { query, results: [] };
-  return res.json();
+  try {
+    const params = new URLSearchParams({ q: query });
+    if (opts?.creatorId) params.set("creator_id", opts.creatorId);
+    if (opts?.limit) params.set("limit", String(opts.limit));
+    const res = await fetch(`${API_BASE}/search?${params}`);
+    if (!res.ok) return { query, results: [] };
+    return res.json();
+  } catch {
+    return { query, results: [] };
+  }
 }
