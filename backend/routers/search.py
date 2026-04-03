@@ -25,6 +25,7 @@ def search_videos(
     creator_id: Optional[str] = None,
     limit: int = Query(10, ge=1, le=50),
 ):
+    logger.info('search: q="%s", creator=%s, limit=%d', q, creator_id or "all", limit)
     videos_t = pxt.get_table(f"{config.APP_NAMESPACE}.videos")
     creators_map = _load_creators_map()
 
@@ -39,13 +40,17 @@ def search_videos(
     )
     _attach_attrs(rows, videos_t)
 
-    return SearchResponse(
-        query=q,
-        results=[
-            SearchResultItem(
-                video=_build_video_response(row, creators_map),
-                score=round(row.get("score", 0.0), 4),
-            )
-            for row in rows
-        ],
-    )
+    results = [
+        SearchResultItem(
+            video=_build_video_response(row, creators_map),
+            score=round(row.get("score", 0.0), 4),
+        )
+        for row in rows
+    ]
+
+    for r in results[:3]:
+        logger.info(
+            "  [%.3f] %s — %s", r.score, r.video.title[:40], r.video.creator.name
+        )
+
+    return SearchResponse(query=q, results=results)

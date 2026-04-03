@@ -99,6 +99,12 @@ def _to_rec(
 
 @router.post("/for-you", response_model=RecommendationsResponse)
 def for_you(body: ForYouRequest):
+    logger.info(
+        "for-you: %d subscriptions, %d watched, limit=%d",
+        len(body.subscriptions),
+        len(body.watch_history),
+        body.limit,
+    )
     videos_t = pxt.get_table(f"{config.APP_NAMESPACE}.videos")
     creators_map = _load_creators_map()
     subscriptions = set(body.subscriptions)
@@ -139,6 +145,7 @@ def for_you(body: ForYouRequest):
             )
             for v in _apply_diversity(combined)[: body.limit]
         ]
+        logger.info("  cold start → %d recs", len(recs))
         return RecommendationsResponse(recommendations=recs)
 
     # Standard flow: Marengo similarity from watch history
@@ -154,9 +161,9 @@ def for_you(body: ForYouRequest):
         for c in _similarity_candidates(
             videos_t, w_vid["title"], watched, body.limit * 3
         ):
-            if c["id"] not in candidate_scores or c.get("score", 0) > candidate_scores[
-                c["id"]
-            ].get("score", 0):
+            score = c.get("score") or 0.0
+            best = candidate_scores.get(c["id"], {}).get("score") or 0.0
+            if c["id"] not in candidate_scores or score > best:
                 c["_source_video"] = w_vid
                 candidate_scores[c["id"]] = c
 
@@ -192,7 +199,17 @@ def for_you(body: ForYouRequest):
         _to_rec(c, creators_map, c.get("_source_video", {}), "discovery", subscriptions)
         for c in final_disc
     ]
-    return RecommendationsResponse(recommendations=recs[: body.limit])
+    final = recs[: body.limit]
+    sub_count = sum(1 for r in final if r.source == "subscription")
+    disc_count = len(final) - sub_count
+    logger.info(
+        "  → %d recs (%d sub + %d disc), top: %s",
+        len(final),
+        sub_count,
+        disc_count,
+        final[0].video.title[:50] if final else "none",
+    )
+    return RecommendationsResponse(recommendations=final)
 
 
 # ---------------------------------------------------------------------------
@@ -202,6 +219,7 @@ def for_you(body: ForYouRequest):
 
 @router.post("/similar", response_model=RecommendationsResponse)
 def similar(body: SimilarRequest):
+    logger.info("similar: video_id=%s", body.video_id)
     videos_t = pxt.get_table(f"{config.APP_NAMESPACE}.videos")
     creators_map = _load_creators_map()
 
@@ -235,6 +253,13 @@ def similar(body: SimilarRequest):
         )
         for c in candidates[: body.limit]
     ]
+    logger.info(
+        "  → %d similar to '%s'",
+        len(recs),
+        ref.get("title", "")[:40],
+    )
+    for r in recs[:3]:
+        logger.info("    [%.3f] %s", r.score or 0, r.video.title[:50])
     return RecommendationsResponse(recommendations=recs)
 
 
@@ -245,6 +270,9 @@ def similar(body: SimilarRequest):
 
 @router.post("/creator-catalog", response_model=CreatorCatalogResponse)
 def creator_catalog(body: CreatorCatalogRequest):
+    logger.info(
+        "creator-catalog: %s, %d watched", body.creator_id[:15], len(body.watch_history)
+    )
     videos_t = pxt.get_table(f"{config.APP_NAMESPACE}.videos")
     creators_map = _load_creators_map()
 
@@ -319,6 +347,7 @@ def creator_catalog(body: CreatorCatalogRequest):
                 for r in ranked[: body.limit]
             ]
 
+    logger.info("  → %d recommended, %d popular", len(recommended), len(popular))
     return CreatorCatalogResponse(
         creator=creator_resp, recommended=recommended, popular=popular
     )
