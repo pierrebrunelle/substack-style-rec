@@ -11,9 +11,14 @@ from routers import videos, creators, recommendations, search
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+    format="%(asctime)s [%(name)s] %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+# Suppress noisy third-party loggers — only show our router/pixeltable output
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("pixeltable_pgserver").setLevel(logging.WARNING)
 
 
 @asynccontextmanager
@@ -24,7 +29,7 @@ async def lifespan(app: FastAPI):
     except Exception:
         logger.warning(
             "PixelTable schema not initialized. "
-            "Run 'python setup_pixeltable.py' then 'python ingest.py' first. "
+            "Run 'uv run setup_pixeltable.py' first. "
             "The server will start but API calls will fail."
         )
     yield
