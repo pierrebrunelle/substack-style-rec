@@ -224,13 +224,12 @@ def similar(body: SimilarRequest):
     creators_map = _load_creators_map()
 
     ref_rows = list(
-        videos_t.where(videos_t.id == body.video_id)
-        .select(videos_t.id, videos_t.title, videos_t.creator_id)
-        .collect()
+        _select_videos(videos_t, videos_t.where(videos_t.id == body.video_id)).collect()
     )
     if not ref_rows:
         raise HTTPException(status_code=404, detail="Video not found")
 
+    _attach_attrs(ref_rows, videos_t)
     ref = ref_rows[0]
     candidates = _similarity_candidates(
         videos_t,

@@ -131,9 +131,11 @@ def list_videos(
     if creator_id:
         query = query.where(videos_t.creator_id == creator_id)
 
-    total = query.count()
+    all_rows = list(_select_videos(videos_t, query).collect())
+    total = len(all_rows)
     total_pages = max(1, (total + limit - 1) // limit)
-    rows = list(_select_videos(videos_t, query).limit(limit).collect())
+    start = (page - 1) * limit
+    rows = all_rows[start : start + limit]
     _attach_attrs(rows, videos_t)
 
     return PaginatedVideosResponse(
