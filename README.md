@@ -97,8 +97,7 @@ TWELVELABS_INDEX_ID=69c37b6708cd679f8afbd748
 EOF
 
 uv sync                        # Install deps from lockfile
-uv run setup_pixeltable.py     # Create schema (idempotent)
-uv run ingest.py               # Load 25 videos from TL index
+uv run setup_pixeltable.py     # Create schema + load data from TL index
 uv run main.py                 # FastAPI on localhost:8000
 ```
 
@@ -115,10 +114,9 @@ NEXT_PUBLIC_API_BASE=http://localhost:8000/api
 For full multimodal video embeddings on 30-second segments:
 
 ```bash
-uv sync --extra download               # Install yt-dlp
-uv run download_videos.py              # Download video files (~9 GB)
-uv run ingest.py --with-videos         # Backfill video file paths
-uv run setup_pixeltable.py             # Creates segment view + video embedding index
+uv sync --extra download                    # Install yt-dlp
+uv run download_videos.py                   # Download video files (~9 GB)
+uv run setup_pixeltable.py --with-videos    # Backfill paths + create segment view + video embeddings
 ```
 
 This generates 1,409 video segment embeddings via Marengo 3.0 -- each segment captures actual visual, audio, and speech content.
@@ -149,9 +147,8 @@ This generates 1,409 video segment embeddings via Marengo 3.0 -- each segment ca
 │   ├── config.py                 # Environment + TL credentials
 │   ├── models.py                 # Pydantic models (camelCase JSON)
 │   ├── functions.py              # analyze_video UDF + generate_reason
-│   ├── setup_pixeltable.py       # Schema: tables, indexes, computed columns, segment view
-│   ├── ingest.py                 # Data loader from TL index (--with-videos for segments)
-│   ├── download_videos.py        # yt-dlp video downloader
+│   ├── setup_pixeltable.py       # Schema + data: tables, indexes, computed columns, TL ingest
+│   ├── download_videos.py        # yt-dlp video downloader (optional, for segment embeddings)
 │   └── routers/                  # videos, creators, recommendations, search
 │
 ├── scripts/                      # Content curation + metadata CSVs

@@ -15,10 +15,9 @@ npm start            # Serve production build
 
 # Backend (run from backend/ directory)
 uv sync                                # Install deps from lockfile into .venv
-uv run setup_pixeltable.py             # Initialize PixelTable schema (idempotent)
-uv run ingest.py                       # Load data from TL index (metadata + text embeddings)
-uv run ingest.py --with-videos         # Also include video file paths for segment embeddings
-uv run download_videos.py              # Download video files from YouTube (yt-dlp)
+uv run setup_pixeltable.py             # Create schema + load data from TL index (idempotent)
+uv run setup_pixeltable.py --with-videos  # Also include local video files for segment embeddings
+uv run download_videos.py              # Download video files from YouTube (yt-dlp, optional)
 uv run main.py                         # Start FastAPI on :8000
 ```
 
@@ -49,8 +48,7 @@ Pages → src/lib/api.ts → FastAPI backend (backend/) → PixelTable → TL Em
 - **`backend/main.py`** — App entry, CORS, lifespan, router includes
 - **`backend/config.py`** — Env vars, TL API config, creator descriptions, Analyze prompt
 - **`backend/models.py`** — Pydantic models with camelCase serialization matching `types.ts`
-- **`backend/setup_pixeltable.py`** — Schema: creators + videos tables, Marengo embedding index, Analyze API computed columns
-- **`backend/ingest.py`** — Fetches 25 videos from TL index, inserts into PixelTable
+- **`backend/setup_pixeltable.py`** — Schema + data: creates tables, indexes, computed columns, and loads videos from TL index
 - **`backend/functions.py`** — `analyze_video` UDF (TL Generate API), `generate_reason` for rec explanations
 - **`backend/routers/`** — videos, creators, recommendations, search
 
