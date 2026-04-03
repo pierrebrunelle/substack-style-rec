@@ -153,13 +153,16 @@ def for_you(body: ForYouRequest):
     _attach_attrs(all_rows, videos_t)
     by_id = {v["id"]: v for v in all_rows}
 
+    # If user has watched (almost) everything, don't exclude — just deprioritize
+    exclude = watched if len(watched) < len(all_rows) - 2 else set()
+
     candidate_scores: dict[str, dict] = {}
     for wid in body.watch_history[-5:]:
         w_vid = by_id.get(wid)
         if not w_vid:
             continue
         for c in _similarity_candidates(
-            videos_t, w_vid["title"], watched, body.limit * 3
+            videos_t, w_vid["title"], exclude, body.limit * 3
         ):
             score = c.get("score") or 0.0
             best = candidate_scores.get(c["id"], {}).get("score") or 0.0
@@ -231,10 +234,17 @@ def similar(body: SimilarRequest):
 
     _attach_attrs(ref_rows, videos_t)
     ref = ref_rows[0]
+    total_videos = videos_t.count()
+    watched_plus_current = set(body.watch_history) | {body.video_id}
+    exclude = (
+        watched_plus_current
+        if len(watched_plus_current) < total_videos - 2
+        else {body.video_id}
+    )
     candidates = _similarity_candidates(
         videos_t,
         ref["title"],
-        set(body.watch_history) | {body.video_id},
+        exclude,
         body.limit * 3,
     )
     _attach_attrs(candidates, videos_t)
