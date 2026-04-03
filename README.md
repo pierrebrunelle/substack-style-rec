@@ -109,17 +109,7 @@ Add to the root `.env.local`:
 NEXT_PUBLIC_API_BASE=http://localhost:8000/api
 ```
 
-### 4. (Optional) Video segment embeddings
-
-For full multimodal video embeddings on 30-second segments:
-
-```bash
-uv sync --extra download                    # Install yt-dlp
-uv run download_videos.py                   # Download video files (~9 GB)
-uv run setup_pixeltable.py --with-videos    # Backfill paths + create segment view + video embeddings
-```
-
-This generates 1,409 video segment embeddings via Marengo 3.0 -- each segment captures actual visual, audio, and speech content.
+That's it. Two commands to set up the backend (`uv sync` + `uv run setup_pixeltable.py`), one to start it.
 
 ## Features
 
@@ -148,7 +138,6 @@ This generates 1,409 video segment embeddings via Marengo 3.0 -- each segment ca
 │   ├── models.py                 # Pydantic models (camelCase JSON)
 │   ├── functions.py              # analyze_video UDF + generate_reason
 │   ├── setup_pixeltable.py       # Schema + data: tables, indexes, computed columns, TL ingest
-│   ├── download_videos.py        # yt-dlp video downloader (optional, for segment embeddings)
 │   └── routers/                  # videos, creators, recommendations, search
 │
 ├── scripts/                      # Content curation + metadata CSVs

@@ -21,18 +21,17 @@ router = APIRouter(prefix="/api", tags=["creators"])
 @router.get("/creators", response_model=CreatorsListResponse)
 def list_creators():
     creators_map = _load_creators_map()
-    return CreatorsListResponse(
-        data=[
-            CreatorResponse(
-                id=cid,
-                name=info["name"],
-                avatar_url=info["avatar_url"],
-                description=info["description"],
-                video_count=info["video_count"],
-            )
-            for cid, info in creators_map.items()
-        ]
-    )
+    data = [
+        CreatorResponse(
+            id=cid,
+            name=info["name"],
+            avatar_url=info["avatar_url"],
+            description=info["description"],
+            video_count=info["video_count"],
+        )
+        for cid, info in creators_map.items()
+    ]
+    return CreatorsListResponse(data=data)
 
 
 @router.get("/creators/{creator_id}", response_model=CreatorDetailResponse)

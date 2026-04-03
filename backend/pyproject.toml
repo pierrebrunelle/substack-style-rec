@@ -11,6 +11,3 @@ dependencies = [
     "twelvelabs",
     "httpx",
 ]
-
-[project.optional-dependencies]
-download = ["yt-dlp"]

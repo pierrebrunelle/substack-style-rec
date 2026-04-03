@@ -16,8 +16,6 @@ npm start            # Serve production build
 # Backend (run from backend/ directory)
 uv sync                                # Install deps from lockfile into .venv
 uv run setup_pixeltable.py             # Create schema + load data from TL index (idempotent)
-uv run setup_pixeltable.py --with-videos  # Also include local video files for segment embeddings
-uv run download_videos.py              # Download video files from YouTube (yt-dlp, optional)
 uv run main.py                         # Start FastAPI on :8000
 ```
 
