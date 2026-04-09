@@ -90,6 +90,7 @@ function SearchResults() {
   const [textQuery, setTextQuery] = useState(query);
   const [videos, setVideos] = useState<Video[] | null>(null);
   const [searchLabel, setSearchLabel] = useState(query);
+  const [searchMessage, setSearchMessage] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -99,6 +100,7 @@ function SearchResults() {
   const doTextSearch = useCallback(async (q: string) => {
     setIsSearching(true);
     setSearchLabel(q);
+    setSearchMessage(null);
     try {
       if (q) {
         const data = await searchVideos(q, { limit: 20 });
@@ -115,10 +117,12 @@ function SearchResults() {
   const doFileSearch = useCallback(async (file: File) => {
     setIsSearching(true);
     setSearchLabel(`Searching by ${getFileModality(file)}: ${file.name}`);
+    setSearchMessage(null);
     try {
       const data = await searchByFile(file, { limit: 20 });
       setVideos(data.results.map((r: SearchResult) => r.video));
       setSearchLabel(data.query || file.name);
+      if (data.message) setSearchMessage(data.message);
     } finally {
       setIsSearching(false);
     }
@@ -316,7 +320,9 @@ function SearchResults() {
               </div>
             ) : (
               <div className="py-20 text-center">
-                <p className="text-[var(--text-tertiary)]">No videos found. Try a different search.</p>
+                <p className="text-[var(--text-tertiary)]">
+                  {searchMessage || "No videos found. Try a different search."}
+                </p>
               </div>
             )}
           </>

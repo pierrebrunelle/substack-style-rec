@@ -11,14 +11,14 @@ from routers import videos, creators, recommendations, search
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s [%(name)s] %(message)s",
+    format="%(asctime)s %(message)s",
+    datefmt="%H:%M:%S",
 )
 logger = logging.getLogger(__name__)
 
-# Suppress noisy third-party loggers — only show our router/pixeltable output
-logging.getLogger("httpx").setLevel(logging.WARNING)
-logging.getLogger("httpcore").setLevel(logging.WARNING)
-logging.getLogger("pixeltable_pgserver").setLevel(logging.WARNING)
+# Only show our app logs + errors from third-party
+for name in ("httpx", "httpcore", "pixeltable_pgserver", "uvicorn.access"):
+    logging.getLogger(name).setLevel(logging.WARNING)
 
 
 @asynccontextmanager
@@ -66,4 +66,5 @@ if __name__ == "__main__":
         port=8000,
         reload=True,
         reload_excludes=["data/*", "*.log"],
+        log_level="warning",
     )

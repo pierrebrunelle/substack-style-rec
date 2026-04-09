@@ -135,7 +135,7 @@ export async function getCreatorCatalog(
 // ---------------------------------------------------------------------------
 
 export type SearchResult = { video: Video; score: number };
-export type SearchApiResponse = { query: string; modality?: string; results: SearchResult[] };
+export type SearchApiResponse = { query: string; modality?: string; results: SearchResult[]; message?: string };
 
 export async function searchVideos(
   query: string,

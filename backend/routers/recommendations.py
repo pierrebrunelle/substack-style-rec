@@ -205,13 +205,15 @@ def for_you(body: ForYouRequest):
     final = recs[: body.limit]
     sub_count = sum(1 for r in final if r.source == "subscription")
     disc_count = len(final) - sub_count
-    logger.info(
-        "  → %d recs (%d sub + %d disc), top: %s",
-        len(final),
-        sub_count,
-        disc_count,
-        final[0].video.title[:50] if final else "none",
-    )
+    if final:
+        top = final[0]
+        logger.info(
+            "  → %d recs (%d sub + %d disc) | [%.3f] %s",
+            len(final), sub_count, disc_count,
+            top.score or 0, top.video.title[:50],
+        )
+    else:
+        logger.info("  → 0 recs")
     return RecommendationsResponse(recommendations=final)
 
 
@@ -262,8 +264,11 @@ def similar(body: SimilarRequest):
         )
         for c in candidates[: body.limit]
     ]
-    top = recs[0].video.title[:50] if recs else "none"
-    logger.info("  → %d similar, top: %s", len(recs), top)
+    if recs:
+        top = recs[0]
+        logger.info("  → %d similar | [%.3f] %s", len(recs), top.score or 0, top.video.title[:50])
+    else:
+        logger.info("  → 0 similar")
     return RecommendationsResponse(recommendations=recs)
 
 

@@ -59,14 +59,21 @@ def _format_results(rows, query_label, modality="text"):
         for row in rows
     ]
 
-    top = results[0].video.title[:50] if results else "none"
-    logger.info("  → %d results, top: %s", len(results), top)
+    if results:
+        top = results[0]
+        logger.info(
+            "  → %d results | [%.3f] %s", len(results), top.score, top.video.title[:50]
+        )
+    else:
+        logger.info("  → 0 results")
 
     return SearchResponse(query=query_label, modality=modality, results=results)
 
 
 def _search(videos_t, chunks_t, q, creator_id, limit, **file_kwargs):
     """Unified search: prefer chunks (content-based), fall back to title."""
+    is_file_query = bool(file_kwargs)
+
     if chunks_t is not None:
         kwargs = file_kwargs if file_kwargs else {"string": q}
         try:
@@ -75,6 +82,13 @@ def _search(videos_t, chunks_t, q, creator_id, limit, **file_kwargs):
             return rows
         except Exception as exc:
             logger.warning("chunk search failed (%s), falling back to title", exc)
+
+    if is_file_query:
+        logger.warning(
+            "  File search requires video_chunks view (not created yet). "
+            "Run 'uv run download_videos.py && uv run setup_pixeltable.py' to enable."
+        )
+        return None
 
     if q:
         rows = _title_similarity(videos_t, q, None, limit, creator_id)
@@ -151,6 +165,13 @@ async def search_multimodal(
 
             file_kwargs = {modality: str(tmp_path)}
             rows = _search(videos_t, chunks_t, q, creator_id, limit, **file_kwargs)
+            if rows is None:
+                return SearchResponse(
+                    query=f"[{modality}] {file.filename}",
+                    modality=modality,
+                    results=[],
+                    message="File search requires video chunks. Run download_videos.py + setup_pixeltable.py first.",
+                )
             return _format_results(rows, label, modality=modality)
 
         elif q:
