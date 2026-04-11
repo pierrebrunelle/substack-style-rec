@@ -1,17 +1,20 @@
 """Pixeltable schema + data setup.
 
-Creates tables, indexes, computed columns, and loads all video data
-from the Twelve Labs index. Run once — everything is idempotent.
+Creates tables, indexes, computed columns, and loads video data from
+the Twelve Labs index. Run once — everything is idempotent.
 
-All 25 videos are always loaded (metadata + title embeddings + Analyze API).
-Video chunks (for multimodal search) are only created for videos that have
-local .mp4 files — download those first with `uv run download_videos.py`.
+By default loads 3 quick-start videos (fast: ~2 min).
+Pass --full to load all 25 videos (~10 min).
 
 Usage:
-    uv run download_videos.py      # download 3 quick-start videos (or --full for all)
-    uv run setup_pixeltable.py     # load all 25 videos, chunk only downloaded ones
+    uv run download_videos.py          # download 3 videos
+    uv run setup_pixeltable.py         # insert 3 videos + chunk them
+
+    uv run download_videos.py --full   # download all 25 videos (13GB)
+    uv run setup_pixeltable.py --full  # insert all 25 + chunk downloaded ones
 """
 
+import argparse
 import logging
 import re
 from pathlib import Path
@@ -27,6 +30,8 @@ from functions import analyze_video
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
+QUICK_YOUTUBE_IDS = {"sO4te2QNsHY", "ntPGl8UyIq4", "QpKypvDjiPM"}
+
 marengo = embed.using(model_name="marengo3.0")
 
 VIDEO_FILES_DIR = Path(__file__).resolve().parent / "video_files"
@@ -36,8 +41,9 @@ def strip_extension(filename: str) -> str:
     return re.sub(r"\.(mp4|webm|mkv|mov)$", "", filename, flags=re.IGNORECASE).strip()
 
 
-def setup():
-    logger.info("Setting up Pixeltable under '%s'...", config.APP_NAMESPACE)
+def setup(full: bool = False):
+    mode = "all 25 videos" if full else f"{len(QUICK_YOUTUBE_IDS)} quick-start videos"
+    logger.info("Setting up Pixeltable — %s", mode)
     pxt.create_dir(config.APP_NAMESPACE, if_exists="ignore")
 
     # -- Schema ---------------------------------------------------------------
@@ -90,6 +96,13 @@ def setup():
     logger.info("  Fetching from Twelve Labs index %s ...", config.TWELVELABS_INDEX_ID)
     tl_videos = _fetch_tl_videos()
     logger.info("  Found %d videos in index", len(tl_videos))
+
+    if not full:
+        tl_videos = [
+            v for v in tl_videos
+            if (v.get("user_metadata") or {}).get("youtubeId") in QUICK_YOUTUBE_IDS
+        ]
+        logger.info("  Quick-start: using %d videos (pass --full for all)", len(tl_videos))
 
     # Creators
     seen: set[str] = set()
@@ -234,4 +247,7 @@ def _fetch_tl_videos() -> list[dict]:
 
 
 if __name__ == "__main__":
-    setup()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--full", action="store_true", help="Load all 25 videos")
+    args = parser.parse_args()
+    setup(full=args.full)
