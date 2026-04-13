@@ -190,7 +190,7 @@ def setup(full: bool = False):
 
     videos.add_computed_column(
         scenes=videos.video.scene_detect_histogram(
-            fps=10, threshold=0.6, min_scene_len=100,
+            fps=2, threshold=0.8, min_scene_len=120,
         ),
         if_exists="ignore",
     )
