@@ -78,8 +78,9 @@ def _search(videos_t, chunks_t, q, creator_id, limit, **file_kwargs):
         kwargs = file_kwargs if file_kwargs else {"string": q}
         try:
             rows = _chunk_similarity(chunks_t, None, limit, creator_id, **kwargs)
-            _attach_attrs(rows, videos_t)
-            return rows
+            if rows:
+                _attach_attrs(rows, videos_t)
+                return rows
         except Exception as exc:
             logger.warning("chunk search failed (%s), falling back to title", exc)
 

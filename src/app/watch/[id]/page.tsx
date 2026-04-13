@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { getVideo, getSimilarVideos } from "@/lib/api";
 import { useUserState } from "@/lib/user-state";
@@ -16,17 +16,24 @@ export default function WatchPage({ params }: { params: Promise<{ id: string }> 
   const [video, setVideo] = useState<Video | null>(null);
   const [similar, setSimilar] = useState<Recommendation[]>([]);
   const [loading, setLoading] = useState(true);
+  const watchHistoryRef = useRef(watchHistory);
+  watchHistoryRef.current = watchHistory;
 
   useEffect(() => {
-    Promise.all([getVideo(id), getSimilarVideos(id, watchHistory, 8)]).then(
-      ([v, recs]) => {
-        setVideo(v);
-        setSimilar(recs);
-        if (v) markWatched(v.id);
-        setLoading(false);
-      },
-    );
-  }, [id, watchHistory, markWatched]);
+    setLoading(true);
+    Promise.all([
+      getVideo(id),
+      getSimilarVideos(id, watchHistoryRef.current, 8),
+    ]).then(([v, recs]) => {
+      setVideo(v);
+      setSimilar(recs);
+      setLoading(false);
+    });
+  }, [id]);
+
+  useEffect(() => {
+    if (video) markWatched(video.id);
+  }, [video, markWatched]);
 
   if (loading) {
     return (

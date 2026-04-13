@@ -54,9 +54,11 @@ def _similarity_candidates(
 
     if chunks_t is not None:
         try:
-            return _chunk_similarity(
+            rows = _chunk_similarity(
                 chunks_t, exclude_ids, limit, creator_id, string=reference_title
             )
+            if rows:
+                return rows
         except Exception as exc:
             logger.warning("chunk similarity failed (%s), falling back to title", exc)
 
