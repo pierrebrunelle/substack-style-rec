@@ -75,6 +75,7 @@ def _search(videos_t, scenes_t, q, creator_id, limit, **file_kwargs):
         try:
             rows = _scene_similarity(scenes_t, None, limit, creator_id, **kwargs)
             if rows:
+                logger.info("  [scene index] multimodal video content search")
                 _attach_attrs(rows, videos_t)
                 return rows
         except Exception as exc:
@@ -88,6 +89,7 @@ def _search(videos_t, scenes_t, q, creator_id, limit, **file_kwargs):
         return None
 
     if q:
+        logger.info("  [title fallback] text-only title similarity")
         rows = _title_similarity(videos_t, q, None, limit, creator_id)
         _attach_attrs(rows, videos_t)
         return rows

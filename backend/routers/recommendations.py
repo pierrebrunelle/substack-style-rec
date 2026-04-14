@@ -62,6 +62,7 @@ def _similarity_candidates(
         except Exception as exc:
             logger.warning("scene similarity failed (%s), falling back to title", exc)
 
+    logger.info("  [title fallback] using title similarity")
     return _title_similarity(videos_t, reference_title, exclude_ids, limit, creator_id)
 
 
