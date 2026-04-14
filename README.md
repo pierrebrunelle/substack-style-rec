@@ -25,14 +25,16 @@ FastAPI Backend (localhost:8000)
   ├── POST /api/recommendations/for-you    ← 70/30 sub/discovery, diversity, explainable
   ├── POST /api/recommendations/similar    ← watch page sidebar
   ├── POST /api/recommendations/creator-catalog
-  └── GET  /api/search?q=                  ← semantic text-to-video search
+  ├── GET  /api/search?q=                  ← semantic text-to-video search
+  └── POST /api/search                    ← multimodal: image/video/audio upload
        |
        v
 Pixeltable
   ├── creators table (10 creators)
-  ├── videos table (25 videos + pxt.Video + computed topic/style/tone)
-  ├── Marengo 3.0 title embedding index (text-based, 25 × 512-dim)
-  └── Marengo 3.0 video embedding index (multimodal video content)
+  ├── videos table (25 videos + pxt.Video + scene detection + topic/style/tone)
+  ├── video_scenes view (scene_detect_histogram + video_splitter mode=fast)
+  ├── scene_marengo embedding index (multimodal video content per scene)
+  └── title_marengo embedding index (text fallback)
        |
        v
 Twelve Labs API
@@ -46,8 +48,9 @@ Twelve Labs API
 
 - **Declarative schema** -- Define tables, computed columns, and embedding indexes. Pixeltable handles the rest.
 - **Automatic pipelines** -- INSERT a video row and embeddings + attribute extraction run automatically as computed columns. No orchestration code.
-- **`.similarity()` API** -- One-line cross-modal search: `videos.video.similarity(string="AI technology")` finds videos by actual content, not just titles. Powered by pgvector under the hood.
-- **`pxt.Video` column** -- Store video files directly in the table. Pixeltable automatically generates Marengo 3.0 multimodal embeddings on insert — visual, audio, and speech content all in one vector.
+- **Scene detection** -- `scene_detect_histogram()` automatically finds natural scene boundaries. `video_splitter(mode='fast')` splits at those points with stream copy (no re-encoding). Each scene gets its own Marengo 3.0 embedding.
+- **`.similarity()` API** -- One-line cross-modal search: `video_scenes.video_segment.similarity(string="AI technology")` finds videos by actual scene content. Powered by pgvector under the hood.
+- **`pxt.Video` column** -- Store video files directly in the table. Scene detection + embedding run automatically as computed columns on insert.
 
 See the [Pixeltable + Twelve Labs integration docs](https://docs.pixeltable.com/sdk/latest/twelvelabs) for the full API reference.
 
@@ -97,9 +100,13 @@ TWELVELABS_INDEX_ID=69c37b6708cd679f8afbd748
 EOF
 
 uv sync                        # Install deps from lockfile
-uv run download_videos.py      # Download video files from YouTube (one-time, ~15 min)
-uv run setup_pixeltable.py     # Create schema + load data + generate video embeddings
+uv run download_videos.py      # Download 3 quick-start videos (~2 min)
+uv run setup_pixeltable.py     # Schema + scene detection + Marengo embeddings (~4 min)
 uv run main.py                 # FastAPI on localhost:8000
+
+# For the full 25-video dataset (13GB download, ~30 min setup):
+uv run download_videos.py --full
+uv run setup_pixeltable.py --full
 ```
 
 ### 3. Connect frontend to backend
@@ -110,7 +117,7 @@ Add to the root `.env.local`:
 NEXT_PUBLIC_API_BASE=http://localhost:8000/api
 ```
 
-Three commands to set up the backend: `uv sync` (install), `uv run download_videos.py` (download videos), `uv run setup_pixeltable.py` (create schema + embed). Then `uv run main.py` to start.
+Quick-start uses 3 short videos for fast iteration (~4 min total setup). Pass `--full` to load all 25 videos with scene detection and Marengo embeddings.
 
 ## Features
 
@@ -119,7 +126,8 @@ Three commands to set up the backend: `uv sync` (install), `uv run download_vide
 | **Personalized "For You"** | `POST /recommendations/for-you` | Marengo `.similarity()` on watch history, 70% subscription / 30% discovery, max 2 per creator |
 | **Similar Videos** | `POST /recommendations/similar` | Sidebar recs based on current video's embedding |
 | **Creator Catalog** | `POST /recommendations/creator-catalog` | Relevance-sorted (not recency) with `{ recommended, popular }` |
-| **Semantic Search** | `GET /search?q=` | Cross-modal text-to-video via `.similarity(string=q)` |
+| **Semantic Search** | `GET /search?q=` | Text-to-video via scene embeddings `.similarity(string=q)` |
+| **Multimodal Search** | `POST /search` | Image/video/audio file upload → cross-modal scene matching |
 | **Explainable Recs** | All rec endpoints | "Because you watched X -- Similar Y format, Matching Z tone" |
 | **Cold Start** | `POST /recommendations/for-you` | Latest from subscriptions + discovery when no watch history |
 | **Attribute Extraction** | Computed columns | topic/style/tone via TL Analyze API, runs automatically on INSERT |
@@ -138,8 +146,8 @@ Three commands to set up the backend: `uv sync` (install), `uv run download_vide
 │   ├── config.py                 # Environment + TL credentials
 │   ├── models.py                 # Pydantic models (camelCase JSON)
 │   ├── functions.py              # analyze_video UDF + generate_reason
-│   ├── download_videos.py        # Download video files from YouTube via yt-dlp
-│   ├── setup_pixeltable.py       # Schema + data: tables (pxt.Video), embedding indexes, TL ingest
+│   ├── download_videos.py        # Download video files from YouTube via yt-dlp (3 default, --full for all)
+│   ├── setup_pixeltable.py       # Schema + scene detection + Marengo embeddings + TL ingest
 │   └── routers/                  # videos, creators, recommendations, search
 │
 ├── scripts/                      # Content curation + metadata CSVs
