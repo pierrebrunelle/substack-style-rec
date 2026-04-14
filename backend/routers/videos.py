@@ -6,7 +6,6 @@ Also exports shared helpers used by other routers:
 """
 
 import logging
-import subprocess
 import time
 import uuid
 from pathlib import Path
@@ -161,8 +160,13 @@ def _build_video_response(row: dict, creators_map: dict[str, dict]) -> VideoResp
             tone=row.get("tone") or "",
         )
 
+    thumb = row.get("thumbnail_url", "")
+    vid_id = row["id"]
+    if not thumb and vid_id.startswith("upload_"):
+        thumb = f"/api/videos/{vid_id}/keyframe"
+
     return VideoResponse(
-        id=row["id"],
+        id=vid_id,
         title=row.get("title", ""),
         creator=CreatorResponse(
             id=cid,
@@ -173,7 +177,7 @@ def _build_video_response(row: dict, creators_map: dict[str, dict]) -> VideoResp
         ),
         category=row.get("category", "interview"),
         duration=row.get("duration", 0),
-        thumbnail_url=row.get("thumbnail_url", ""),
+        thumbnail_url=thumb,
         hls_url=row.get("hls_url"),
         upload_date=row.get("upload_date", ""),
         attributes=attributes,
@@ -263,6 +267,31 @@ def get_video(video_id: str):
     return _build_video_response(rows[0], _load_creators_map())
 
 
+@router.get("/videos/{video_id}/keyframe")
+def get_keyframe(video_id: str):
+    """Serve the auto-extracted keyframe (frame at 2s) as a JPEG image."""
+    from fastapi.responses import Response
+
+    videos_t = pxt.get_table(f"{config.APP_NAMESPACE}.videos")
+    try:
+        rows = list(
+            videos_t.where(videos_t.id == video_id)
+            .select(videos_t.keyframe)
+            .collect()
+        )
+    except Exception:
+        raise HTTPException(status_code=404, detail="Keyframe not available")
+
+    if not rows or rows[0].get("keyframe") is None:
+        raise HTTPException(status_code=404, detail="Keyframe not available")
+
+    import io
+    img = rows[0]["keyframe"]
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=80)
+    return Response(content=buf.getvalue(), media_type="image/jpeg")
+
+
 # ── Self-serve video upload ─────────────────────────────────────────────────
 
 
@@ -299,12 +328,9 @@ async def upload_video(
 
     logger.info("upload: %s (%s, %.1f MB)", title[:40], video_id, size / 1e6)
 
-    duration = _probe_duration(dest)
-    thumb_path = _extract_thumbnail(dest, video_id)
-    thumb_url = f"/api/files/{video_id}_thumb.jpg" if thumb_path else ""
-    video_url = f"/api/files/{video_id}.mp4"
-
     from datetime import date
+
+    video_url = f"/api/files/{video_id}.mp4"
 
     videos_t = pxt.get_table(f"{config.APP_NAMESPACE}.videos")
     videos_t.insert(
@@ -313,8 +339,8 @@ async def upload_video(
             "title": title,
             "creator_id": "user_upload",
             "category": category,
-            "duration": duration,
-            "thumbnail_url": thumb_url,
+            "duration": 0,
+            "thumbnail_url": "",
             "hls_url": video_url,
             "upload_date": date.today().isoformat(),
             "video": str(dest),
@@ -326,32 +352,3 @@ async def upload_video(
     _creators_cache = None
 
     return UploadVideoResponse(id=video_id, title=title, status="processing")
-
-
-def _probe_duration(path: Path) -> int:
-    """Get video duration in seconds via ffprobe."""
-    try:
-        result = subprocess.run(
-            ["ffprobe", "-v", "error", "-show_entries", "format=duration",
-             "-of", "default=noprint_wrappers=1:nokey=1", str(path)],
-            capture_output=True, text=True, timeout=10,
-        )
-        return round(float(result.stdout.strip()))
-    except Exception:
-        return 0
-
-
-def _extract_thumbnail(video_path: Path, video_id: str) -> Path | None:
-    """Extract a thumbnail frame at 2 seconds into the video."""
-    thumb_path = VIDEO_FILES_DIR / f"{video_id}_thumb.jpg"
-    try:
-        subprocess.run(
-            ["ffmpeg", "-y", "-ss", "2", "-i", str(video_path),
-             "-vframes", "1", "-q:v", "3", str(thumb_path)],
-            capture_output=True, timeout=15,
-        )
-        if thumb_path.exists() and thumb_path.stat().st_size > 0:
-            return thumb_path
-    except Exception:
-        pass
-    return None
