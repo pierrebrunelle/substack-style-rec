@@ -77,9 +77,12 @@ def _scene_similarity(
 
     exclude = exclude_ids or set()
     cols = [getattr(scenes_t, f) for f in VIDEO_FIELDS]
+    # Fetch extra scenes before deduping to unique videos; a small multiplier
+    # under-fills when a few titles dominate the top-N scenes (hurts recall).
+    fetch_mult = 12
     scene_rows = list(
         query.order_by(sim, asc=False)
-        .limit((limit + len(exclude)) * 5)
+        .limit((limit + len(exclude)) * fetch_mult)
         .select(*cols, score=sim)
         .collect()
     )

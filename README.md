@@ -104,6 +104,11 @@ uv run download_videos.py      # Download 3 quick-start videos (~2 min)
 uv run setup_pixeltable.py     # Schema + scene detection + Marengo embeddings (~4 min)
 uv run main.py                 # FastAPI on localhost:8000
 
+# Logged re-run (pxt.drop_dir on `substack_rec` only — not a full DB wipe; saves `backend/logs/setup-*.log`):
+#   ./run_setup_logged.sh --drop-dir
+#   ./run_setup_logged.sh --drop-dir --full
+# Use `PIXELTABLE_HOME=./data` in backend/.env so other Pixeltable projects under ~/.pixeltable stay safe.
+
 # For the full 25-video dataset (13GB download, ~30 min setup):
 uv run download_videos.py --full
 uv run setup_pixeltable.py --full

@@ -42,28 +42,61 @@ def _apply_diversity(candidates: list[dict], max_per_creator: int = 2) -> list[d
     return result
 
 
+def _sim_kwargs_from_ref(ref: dict) -> dict:
+    """Prefer full-file video query when we have a local path; else title text (cookbook text-to-video)."""
+    path = ref.get("_video_path") or ref.get("video")
+    if path and str(path).strip():
+        return {"video": str(path)}
+    title = (ref.get("title") or "").strip()
+    return {"string": title if title else "untitled"}
+
+
+def _enrich_video_paths(rows: list[dict], videos_t) -> None:
+    """Attach _video_path from the videos table for scene similarity(video=...)."""
+    if not rows:
+        return
+    ids = [r["id"] for r in rows if r.get("id")]
+    if not ids:
+        return
+    try:
+        pmap = {
+            r["id"]: r.get("video")
+            for r in videos_t.where(videos_t.id.isin(ids))
+            .select(videos_t.id, videos_t.video)
+            .collect()
+        }
+    except Exception:
+        return
+    for r in rows:
+        r["_video_path"] = pmap.get(r["id"])
+
+
 def _similarity_candidates(
     videos_t,
-    reference_title: str,
+    ref: dict,
     exclude_ids: set[str],
     limit: int,
     creator_id: str | None = None,
 ) -> list[dict]:
-    """Query Marengo similarity — prefer video_scenes, fall back to title."""
+    """Query Marengo on video_scenes; use similarity(video=path) when available, else string=title."""
     scenes_t = _get_scenes_table()
+    sim_kw = _sim_kwargs_from_ref(ref)
+    title_fallback = (ref.get("title") or "untitled").strip()
 
     if scenes_t is not None:
         try:
-            rows = _scene_similarity(
-                scenes_t, exclude_ids, limit, creator_id, string=reference_title
-            )
+            rows = _scene_similarity(scenes_t, exclude_ids, limit, creator_id, **sim_kw)
             if rows:
+                if "video" in sim_kw:
+                    logger.info("  [scene index] query=video file (content-to-content)")
+                else:
+                    logger.info("  [scene index] query=title text")
                 return rows
         except Exception as exc:
             logger.warning("scene similarity failed (%s), falling back to title", exc)
 
     logger.info("  [title fallback] using title similarity")
-    return _title_similarity(videos_t, reference_title, exclude_ids, limit, creator_id)
+    return _title_similarity(videos_t, title_fallback, exclude_ids, limit, creator_id)
 
 
 def _matched_attrs(source: dict, target: dict) -> list[str]:
@@ -154,6 +187,7 @@ def for_you(body: ForYouRequest):
     # Standard flow: Marengo similarity from watch history
     all_rows = list(_select_videos(videos_t).collect())
     _attach_attrs(all_rows, videos_t)
+    _enrich_video_paths(all_rows, videos_t)
     by_id = {v["id"]: v for v in all_rows}
 
     # If user has watched (almost) everything, don't exclude — just deprioritize
@@ -165,7 +199,7 @@ def for_you(body: ForYouRequest):
         if not w_vid:
             continue
         for c in _similarity_candidates(
-            videos_t, w_vid["title"], exclude, body.limit * 3
+            videos_t, w_vid, exclude, body.limit * 3
         ):
             score = c.get("score") or 0.0
             best = candidate_scores.get(c["id"], {}).get("score") or 0.0
@@ -238,6 +272,7 @@ def similar(body: SimilarRequest):
         raise HTTPException(status_code=404, detail="Video not found")
 
     _attach_attrs(ref_rows, videos_t)
+    _enrich_video_paths(ref_rows, videos_t)
     ref = ref_rows[0]
     total_videos = videos_t.count()
     watched_plus_current = set(body.watch_history) | {body.video_id}
@@ -248,7 +283,7 @@ def similar(body: SimilarRequest):
     )
     candidates = _similarity_candidates(
         videos_t,
-        ref["title"],
+        ref,
         exclude,
         body.limit * 3,
     )
@@ -325,6 +360,7 @@ def creator_catalog(body: CreatorCatalogRequest):
     if body.watch_history:
         all_rows = list(_select_videos(videos_t).collect())
         _attach_attrs(all_rows, videos_t)
+        _enrich_video_paths(all_rows, videos_t)
         watched_by_id = {
             v["id"]: v for v in all_rows if v["id"] in set(body.watch_history)
         }
@@ -334,7 +370,7 @@ def creator_catalog(body: CreatorCatalogRequest):
             for ref in list(watched_by_id.values())[-3:]:
                 for c in _similarity_candidates(
                     videos_t,
-                    ref["title"],
+                    ref,
                     set(),
                     body.limit,
                     creator_id=body.creator_id,
