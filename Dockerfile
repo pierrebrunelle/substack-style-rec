@@ -16,14 +16,16 @@ RUN pip install --no-cache-dir uv
 WORKDIR /app
 
 # Dependency layer — cached unless pyproject/uv.lock change
-COPY pyproject.toml uv.lock ./
+COPY backend/pyproject.toml backend/uv.lock ./
 RUN uv sync --frozen --no-dev
 
-# App code
-COPY . .
+# Backend code
+COPY backend/ .
+
+# scripts/ lives at the repo root; download_videos.py expects it at ../scripts/
+COPY scripts/ /scripts/
 
 # Pixeltable data lives on a mounted disk in production.
-# Override in the host (Render Disk / Fly Volume / docker run -v ...).
 ENV PIXELTABLE_HOME=/var/pixeltable
 
 EXPOSE 8000
@@ -36,7 +38,6 @@ set -e
 PGDATA="${PIXELTABLE_HOME:-/var/pixeltable}/pgdata"
 if [ -d "$PGDATA" ]; then
   chmod 700 "$PGDATA"
-  # Remove stale lock from a previous container that was killed mid-flight.
   rm -f "$PGDATA/postmaster.pid"
 fi
 exec uv run uvicorn main:app --host 0.0.0.0 --port "${PORT:-8000}" --proxy-headers
