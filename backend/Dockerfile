@@ -28,5 +28,19 @@ ENV PIXELTABLE_HOME=/var/pixeltable
 
 EXPOSE 8000
 
-# PORT is injected by Render. Fall back to 8000 for local `docker run`.
-CMD ["sh", "-c", "uv run uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers"]
+# Render disk mounts can have permissions that Postgres rejects (needs 0700).
+# Fix pgdata permissions on every boot so redeployed containers don't crash.
+COPY <<'EOF' /app/entrypoint.sh
+#!/bin/sh
+set -e
+PGDATA="${PIXELTABLE_HOME:-/var/pixeltable}/pgdata"
+if [ -d "$PGDATA" ]; then
+  chmod 700 "$PGDATA"
+  # Remove stale lock from a previous container that was killed mid-flight.
+  rm -f "$PGDATA/postmaster.pid"
+fi
+exec uv run uvicorn main:app --host 0.0.0.0 --port "${PORT:-8000}" --proxy-headers
+EOF
+RUN chmod +x /app/entrypoint.sh
+
+CMD ["/app/entrypoint.sh"]
