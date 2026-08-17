@@ -25,18 +25,14 @@ from pathlib import Path
 
 import httpx
 import pixeltable as pxt
-from pixeltable.functions.twelvelabs import embed
-from pixeltable.functions.video import video_splitter
 
 import config
-from functions import analyze_video
+from schema import Creators, Videos, VideoScenes, TableModel
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
 QUICK_YOUTUBE_IDS = {"sO4te2QNsHY", "ntPGl8UyIq4", "QpKypvDjiPM"}
-
-marengo = embed.using(model_name="marengo3.0")
 
 VIDEO_FILES_DIR = Path(__file__).resolve().parent / "video_files"
 
@@ -48,51 +44,12 @@ def strip_extension(filename: str) -> str:
 def setup(full: bool = False):
     mode = "all 25 videos" if full else f"{len(QUICK_YOUTUBE_IDS)} quick-start videos"
     logger.info("Setting up Pixeltable — %s", mode)
+
+    # Create namespace directory (create_all does not create parent dirs)
     pxt.create_dir(config.APP_NAMESPACE, if_exists="ignore")
 
-    # -- Schema ---------------------------------------------------------------
-
-    creators = pxt.create_table(
-        f"{config.APP_NAMESPACE}.creators",
-        {
-            "id": pxt.Required[pxt.String],
-            "name": pxt.String,
-            "avatar_url": pxt.String,
-            "description": pxt.String,
-        },
-        primary_key=["id"],
-        if_exists="ignore",
-    )
-
-    videos = pxt.create_table(
-        f"{config.APP_NAMESPACE}.videos",
-        {
-            "id": pxt.Required[pxt.String],
-            "title": pxt.String,
-            "creator_id": pxt.String,
-            "category": pxt.String,
-            "duration": pxt.Int,
-            "thumbnail_url": pxt.String,
-            "hls_url": pxt.String,
-            "upload_date": pxt.String,
-            "video": pxt.Video,
-        },
-        primary_key=["id"],
-        if_exists="ignore",
-    )
-
-    # Text-based embedding index on title (for text → video search)
-    videos.add_embedding_index(
-        "title", string_embed=marengo, idx_name="title_marengo", if_exists="ignore"
-    )
-
-    # Attribute extraction via Twelve Labs Analyze API
-    videos.add_computed_column(
-        raw_attributes=analyze_video(videos.id), if_exists="ignore"
-    )
-    videos.add_computed_column(topic=videos.raw_attributes["topic"], if_exists="ignore")
-    videos.add_computed_column(style=videos.raw_attributes["style"], if_exists="ignore")
-    videos.add_computed_column(tone=videos.raw_attributes["tone"], if_exists="ignore")
+    # Create all tables, views, computed columns, and indexes from schema
+    TableModel.create_all(config.APP_NAMESPACE)
     logger.info("  Schema ready")
 
     # -- Data from Twelve Labs index ------------------------------------------
@@ -125,7 +82,7 @@ def setup(full: bool = False):
                 }
             )
     if creator_rows:
-        status = creators.insert(creator_rows, on_error="ignore")
+        status = Creators.table.insert(creator_rows, on_error="ignore")
         logger.info("  Creators: %d inserted", status.num_rows)
 
     # Videos — resolve local video file paths via YouTube ID
@@ -157,7 +114,6 @@ def setup(full: bool = False):
             }
         )
 
-    has_video_files = len(missing_files) < len(video_rows)
     if missing_files:
         logger.warning(
             "  %d/%d videos missing local files (yt-dlp blocked on cloud IPs is common). "
@@ -179,58 +135,19 @@ def setup(full: bool = False):
                 min(i + batch_size, len(video_rows)),
                 len(video_rows),
             )
-            status = videos.insert(batch, on_error="ignore")
+            status = Videos.table.insert(batch, on_error="ignore")
             total_inserted += status.num_rows
             total_errors += status.num_excs
         logger.info(
             "  Videos: %d inserted, %d errors", total_inserted, total_errors
         )
 
-    # -- Scene detection + scene-based view (for cross-modal search) -----------
-    # Uses Pixeltable's built-in scene_detect_histogram to find natural scene
-    # boundaries, then video_splitter with mode='fast' (stream copy, no
-    # re-encoding) to split at those points. ~10 scenes per video in seconds.
-
-    # min_scene_len is in original video frames (e.g. 30fps video: 900 frames = 30s).
-    # fps=1 halves analysis cost vs fps=2. threshold=0.9 (up from 0.8) requires
-    # stronger scene breaks. Together: ~3-5 scenes per 10-min video, ~8-12 per 30-min.
-    # Fewer scenes = less memory during embed + faster setup on Render.
-    videos.add_computed_column(
-        scenes=videos.video.scene_detect_histogram(
-            fps=1, threshold=0.9, min_scene_len=900,
-        ),
-        if_exists="ignore",
-    )
-    logger.info("  Scene detection column ready")
-
+    # Log scene count (view is created by create_all, scenes compute on insert)
     try:
-        logger.info("  Creating video_scenes view...")
-        video_scenes = pxt.create_view(
-            f"{config.APP_NAMESPACE}.video_scenes",
-            videos,
-            iterator=video_splitter(
-                video=videos.video,
-                segment_times=videos.scenes[1:].start_time,
-                mode="fast",
-            ),
-            if_exists="ignore",
-        )
-
-        video_scenes.add_embedding_index(
-            "video_segment",
-            embedding=marengo,
-            idx_name="scene_marengo",
-            if_exists="ignore",
-        )
-        scene_count = video_scenes.count()
+        scene_count = VideoScenes.table.count()
         logger.info("  video_scenes: %d scenes indexed", scene_count)
     except Exception as exc:
-        logger.warning(
-            "  video_scenes creation failed: %s\n"
-            "  The app will use title-based similarity as fallback.\n"
-            "  Re-run setup to retry.",
-            exc,
-        )
+        logger.warning("  Could not count scenes: %s", exc)
 
     logger.info("\nSetup complete.")
 
