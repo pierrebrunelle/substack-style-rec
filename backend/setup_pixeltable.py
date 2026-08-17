@@ -27,7 +27,7 @@ import httpx
 import pixeltable as pxt
 
 import config
-from schema import Creators, Videos, VideoScenes, TableModel
+from app import Creators, Videos, VideoScenes, TableModel
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
