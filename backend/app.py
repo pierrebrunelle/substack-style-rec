@@ -1,8 +1,12 @@
-"""Class-based Pixeltable schema for the Substack recommendation engine.
+"""Pixeltable schema for Substack TV-style video recommendations.
 
-Defines table models for creators, videos, and the video_scenes view.
-Import TableModel and call TableModel.create_all(namespace) to create
-all tables and indexes.
+Hierarchy:
+    creators (table)       creator profiles
+    videos (table)         source videos + Twelve Labs Analyze attributes
+    -> video_scenes (view) one row per scene (video_splitter), Marengo embeddings for semantic search
+
+Create or update the schema with:
+    pxt app update app.py substack_rec
 """
 
 from __future__ import annotations
