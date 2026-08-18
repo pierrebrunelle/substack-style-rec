@@ -54,14 +54,14 @@ print('drop_dir OK:', config.APP_NAMESPACE)
 " 2>&1 | tee -a "$LOG"
 fi
 
-log "--- pxt app update (create/update schema) ---"
+log "--- pxt schema update (create/update schema) ---"
 set +e
-uv run pxt app update app.py substack_rec 2>&1 | tee -a "$LOG"
+uv run pxt schema update app.py substack_rec 2>&1 | tee -a "$LOG"
 schema_rc=${PIPESTATUS[0]}
 set -e
 
 if [[ "$schema_rc" -ne 0 ]]; then
-  log "ERROR: pxt app update exited with code $schema_rc"
+  log "ERROR: pxt schema update exited with code $schema_rc"
   log "PostgreSQL log (if present): tail -80 \"\${PIXELTABLE_HOME:-\$HOME/.pixeltable}/pgdata/log\"/* 2>/dev/null || true"
   log "Full log: $(pwd)/$LOG"
   exit "$schema_rc"

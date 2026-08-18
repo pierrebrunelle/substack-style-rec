@@ -6,7 +6,7 @@ Hierarchy:
     -> video_scenes (view) one row per scene (video_splitter), Marengo embeddings for semantic search
 
 Create or update the schema with:
-    pxt app update app.py substack_rec
+    pxt schema update app.py substack_rec
 """
 
 from __future__ import annotations
@@ -55,5 +55,5 @@ class VideoScenes(
     ),
 ):
     __indexes__ = [
-        EmbeddingIndex(video_segment, embedding=marengo, name="scene_marengo")  # type: ignore[name-defined]
+        EmbeddingIndex(video_segment, embedding=marengo)  # type: ignore[name-defined]
     ]

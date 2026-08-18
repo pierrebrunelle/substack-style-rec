@@ -7,7 +7,7 @@ By default loads 3 quick-start videos (fast).
 Pass --full to load all 25 videos.
 
 Usage:
-    pxt app update app.py substack_rec   # create schema first
+    pxt schema update app.py substack_rec   # create schema first
     uv run download_videos.py            # download 3 videos
     uv run load.py                       # insert 3 videos
 
@@ -75,7 +75,7 @@ def load(full: bool = False):
                 }
             )
     if creator_rows:
-        status = Creators.table.insert(creator_rows, on_error="ignore")
+        status = Creators.insert(creator_rows, on_error="ignore")
         logger.info("  Creators: %d inserted", status.num_rows)
 
     # Videos — resolve local video file paths via YouTube ID
@@ -128,7 +128,7 @@ def load(full: bool = False):
                 min(i + batch_size, len(video_rows)),
                 len(video_rows),
             )
-            status = Videos.table.insert(batch, on_error="ignore")
+            status = Videos.insert(batch, on_error="ignore")
             total_inserted += status.num_rows
             total_errors += status.num_excs
         logger.info(
@@ -137,7 +137,7 @@ def load(full: bool = False):
 
     # Log scene count
     try:
-        scene_count = VideoScenes.table.count()
+        scene_count = VideoScenes.count()
         logger.info("  video_scenes: %d scenes indexed", scene_count)
     except Exception as exc:
         logger.warning("  Could not count scenes: %s", exc)

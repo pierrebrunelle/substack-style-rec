@@ -54,7 +54,7 @@ def _apply_diversity(candidates: list[dict], max_per_creator: int = 2) -> list[d
 def _get_ref_scene_vectors(scenes_t, video_id: str, max_segments: int = MAX_SCENE_QUERIES) -> list:
     """Get representative scene embedding vectors for a video.
 
-    Reads the Marengo vectors stored in the scene_marengo embedding index via
+    Reads the Marengo vectors stored in the video_segment embedding index via
     video_segment.embedding() and samples evenly-spaced scenes. Querying with these
     stored vectors avoids re-uploading/re-embedding clips to Twelve Labs at query
     time — the scene was already embedded at setup, so we reuse that vector.
@@ -62,7 +62,7 @@ def _get_ref_scene_vectors(scenes_t, video_id: str, max_segments: int = MAX_SCEN
     try:
         rows = list(
             scenes_t.where(scenes_t.id == video_id)
-            .select(vec=scenes_t.video_segment.embedding(idx="scene_marengo"))
+            .select(vec=scenes_t.video_segment.embedding())
             .collect()
         )
     except Exception:
