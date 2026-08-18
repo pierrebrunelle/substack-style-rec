@@ -42,8 +42,8 @@ class VideoAttributes(TypedDict):
     tone: str
 
 
-@pxt.udf
-def analyze_video(video_id: str) -> VideoAttributes:
+@pxt.udf(is_deterministic=False)
+async def analyze_video(video_id: str) -> VideoAttributes:
     """Call Twelve Labs Analyze API to extract topic, style, and tone."""
     url = f"{config.TWELVELABS_BASE_URL}/analyze"
     headers = {
@@ -53,8 +53,9 @@ def analyze_video(video_id: str) -> VideoAttributes:
     payload = {"video_id": video_id, "prompt": config.ANALYZE_PROMPT}
 
     try:
-        resp = httpx.post(url, json=payload, headers=headers, timeout=120.0)
-        resp.raise_for_status()
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(url, json=payload, headers=headers, timeout=120.0)
+            resp.raise_for_status()
 
         # TL Analyze API returns streaming NDJSON — concatenate text fragments
         text_parts: list[str] = []
