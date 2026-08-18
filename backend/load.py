@@ -1,21 +1,18 @@
-"""Pixeltable schema + data setup.
+"""Load video data into Pixeltable tables.
 
-Creates tables, indexes, computed columns, and loads video data from
-the Twelve Labs index. Run once — everything is idempotent.
+Fetches video metadata from the Twelve Labs index and inserts into the
+creators and videos tables. Schema must already exist (created via CLI).
 
 By default loads 3 quick-start videos (fast).
 Pass --full to load all 25 videos.
 
-Scene detection (scene_detect_histogram) finds natural scene boundaries,
-then video_splitter splits at those points with mode='fast' (stream copy,
-no re-encoding). Produces ~40 scenes per video.
-
 Usage:
-    uv run download_videos.py          # download 3 videos
-    uv run setup_pixeltable.py         # insert 3 videos + detect scenes + embed
+    pxt app update app.py substack_rec   # create schema first
+    uv run download_videos.py            # download 3 videos
+    uv run load.py                       # insert 3 videos
 
-    uv run download_videos.py --full   # download all 25 videos (13GB)
-    uv run setup_pixeltable.py --full  # insert all 25 + detect scenes + embed
+    uv run download_videos.py --full     # download all 25 videos (13GB)
+    uv run load.py --full                # insert all 25
 """
 
 import argparse
@@ -24,7 +21,6 @@ import re
 from pathlib import Path
 
 import httpx
-import pixeltable as pxt
 
 import config
 from app import Creators, Videos, VideoScenes, TableModel
@@ -41,16 +37,13 @@ def strip_extension(filename: str) -> str:
     return re.sub(r"\.(mp4|webm|mkv|mov)$", "", filename, flags=re.IGNORECASE).strip()
 
 
-def setup(full: bool = False):
+def load(full: bool = False):
     mode = "all 25 videos" if full else f"{len(QUICK_YOUTUBE_IDS)} quick-start videos"
-    logger.info("Setting up Pixeltable — %s", mode)
+    logger.info("Loading data into Pixeltable — %s", mode)
 
-    # Create namespace directory (create_all does not create parent dirs)
-    pxt.create_dir(config.APP_NAMESPACE, if_exists="ignore")
-
-    # Create all tables, views, computed columns, and indexes from schema
-    TableModel.create_all(config.APP_NAMESPACE)
-    logger.info("  Schema ready")
+    # Bind models to existing tables (schema created via CLI)
+    TableModel.bind_all(config.APP_NAMESPACE)
+    logger.info("  Bound to schema")
 
     # -- Data from Twelve Labs index ------------------------------------------
 
@@ -142,14 +135,14 @@ def setup(full: bool = False):
             "  Videos: %d inserted, %d errors", total_inserted, total_errors
         )
 
-    # Log scene count (view is created by create_all, scenes compute on insert)
+    # Log scene count
     try:
         scene_count = VideoScenes.table.count()
         logger.info("  video_scenes: %d scenes indexed", scene_count)
     except Exception as exc:
         logger.warning("  Could not count scenes: %s", exc)
 
-    logger.info("\nSetup complete.")
+    logger.info("\nLoad complete.")
 
 
 def _resolve_video_path(youtube_id: str) -> str | None:
@@ -185,4 +178,4 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--full", action="store_true", help="Load all 25 videos")
     args = parser.parse_args()
-    setup(full=args.full)
+    load(full=args.full)

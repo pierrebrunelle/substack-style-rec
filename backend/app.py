@@ -22,28 +22,28 @@ TableModel = pxt.model_base()
 
 
 class Creators(TableModel, name="creators"):
-    id = Column(type=pxt.Required[pxt.String], primary_key=True)
-    name: pxt.String
-    avatar_url: pxt.String
-    description: pxt.String
+    id = Column(type=pxt.String, primary_key=True)
+    name: pxt.String | None
+    avatar_url: pxt.String | None
+    description: pxt.String | None
 
 
 class Videos(TableModel, name="videos"):
-    id = Column(type=pxt.Required[pxt.String], primary_key=True)
-    title: pxt.String
-    creator_id: pxt.String
-    category: pxt.String
-    duration: pxt.Int
-    thumbnail_url: pxt.String
-    hls_url: pxt.String
-    upload_date: pxt.String
-    video: pxt.Video
+    id = Column(type=pxt.String, primary_key=True)
+    title: pxt.String | None
+    creator_id: pxt.String | None
+    category: pxt.String | None
+    duration: pxt.Int | None
+    thumbnail_url: pxt.String | None
+    hls_url: pxt.String | None
+    upload_date: pxt.String | None
+    video: pxt.Video | None
     raw_attributes = analyze_video(id)
-    topic = raw_attributes["topic"]
-    style = raw_attributes["style"]
-    tone = raw_attributes["tone"]
+    topic = raw_attributes.topic
+    style = raw_attributes.style
+    tone = raw_attributes.tone
     scenes = video.scene_detect_histogram(fps=1, threshold=0.9, min_scene_len=900)
-    __indexes__ = [EmbeddingIndex(title, string_embed=marengo, name="title_marengo")]
+    __indexes__ = [EmbeddingIndex(title, string_embed=marengo)]
 
 
 class VideoScenes(

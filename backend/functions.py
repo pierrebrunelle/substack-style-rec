@@ -2,6 +2,7 @@
 
 import json
 import logging
+from typing import TypedDict
 
 import httpx
 import pixeltable as pxt
@@ -35,8 +36,14 @@ VALID_TONES = frozenset(
 )
 
 
+class VideoAttributes(TypedDict):
+    topic: list[str]
+    style: str
+    tone: str
+
+
 @pxt.udf
-def analyze_video(video_id: str) -> dict:
+def analyze_video(video_id: str) -> VideoAttributes:
     """Call Twelve Labs Analyze API to extract topic, style, and tone."""
     url = f"{config.TWELVELABS_BASE_URL}/analyze"
     headers = {

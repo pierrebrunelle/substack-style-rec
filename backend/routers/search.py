@@ -85,7 +85,7 @@ def _search(videos_t, scenes_t, q, creator_id, limit, **file_kwargs):
         if scenes_t is None:
             logger.warning(
                 "  File search requires video_scenes view (not created yet). "
-                "Run 'uv run download_videos.py && uv run setup_pixeltable.py' to enable."
+                "Run 'uv run download_videos.py && pxt app update app.py substack_rec && uv run load.py' to enable."
             )
         else:
             logger.warning(
