@@ -28,6 +28,7 @@ from routers.videos import (
     _build_video_response,
     _get_scenes_table,
     _load_creators_map,
+    _has_similarity_signal,
     _scene_similarity,
     _select_videos,
     _title_similarity,
@@ -146,7 +147,7 @@ def _similarity_candidates(
         text_query = _build_text_query(ref)
         try:
             rows = _scene_similarity(scenes_t, exclude_ids | {ref_id}, limit, creator_id, string=text_query)
-            if rows:
+            if _has_similarity_signal(rows):
                 logger.info("  [scene index] query=text '%s'", text_query[:60])
                 return rows
         except Exception as exc:

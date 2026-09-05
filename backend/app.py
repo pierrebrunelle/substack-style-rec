@@ -6,6 +6,7 @@ Hierarchy:
     -> video_scenes (view) one row per scene (video_splitter), Marengo embeddings for semantic search
 
 Create or update the schema with:
+    pxt init
     pxt schema update app.py substack_rec
 """
 
@@ -13,23 +14,22 @@ from __future__ import annotations
 
 import pixeltable as pxt
 import pixeltable.functions as pxtf
-from pixeltable.catalog.model import Column, EmbeddingIndex
 
-from functions import analyze_video
+from functions import analyze_video, embed_video_retry
 
 marengo = pxtf.twelvelabs.embed.using(model_name="marengo3.0")
 TableModel = pxt.model_base()
 
 
 class Creators(TableModel, name="creators"):
-    id = Column(type=pxt.String, primary_key=True)
+    id = pxt.Column(type=pxt.String, primary_key=True)
     name: pxt.String | None
     avatar_url: pxt.String | None
     description: pxt.String | None
 
 
 class Videos(TableModel, name="videos"):
-    id = Column(type=pxt.String, primary_key=True)
+    id = pxt.Column(type=pxt.String, primary_key=True)
     title: pxt.String | None
     creator_id: pxt.String | None
     category: pxt.String | None
@@ -43,7 +43,7 @@ class Videos(TableModel, name="videos"):
     style = raw_attributes.style
     tone = raw_attributes.tone
     scenes = video.scene_detect_histogram(fps=1, threshold=0.9, min_scene_len=900)
-    __indexes__ = [EmbeddingIndex(title, string_embed=marengo)]
+    __indexes__ = [pxt.EmbeddingIndex(title, string_embed=marengo)]
 
 
 class VideoScenes(
@@ -55,5 +55,11 @@ class VideoScenes(
     ),
 ):
     __indexes__ = [
-        EmbeddingIndex(video_segment, embedding=marengo)  # type: ignore[name-defined]
+        pxt.EmbeddingIndex(
+            video_segment,
+            embedding=embed_video_retry,  # type: ignore[name-defined]
+            string_embed=marengo,
+            image_embed=marengo,
+            audio_embed=marengo,
+        )
     ]

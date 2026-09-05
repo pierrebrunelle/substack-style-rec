@@ -20,6 +20,7 @@ from routers.videos import (
     _build_video_response,
     _get_scenes_table,
     _load_creators_map,
+    _has_similarity_signal,
     _scene_similarity,
     _title_similarity,
 )
@@ -74,7 +75,7 @@ def _search(videos_t, scenes_t, q, creator_id, limit, **file_kwargs):
         kwargs = file_kwargs if file_kwargs else {"string": q}
         try:
             rows = _scene_similarity(scenes_t, None, limit, creator_id, **kwargs)
-            if rows:
+            if _has_similarity_signal(rows):
                 logger.info("  [scene index] multimodal video content search")
                 _attach_attrs(rows, videos_t)
                 return rows
