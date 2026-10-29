@@ -2,6 +2,11 @@
 
 Run migrate_existing.py before reconciling this schema. New installations use
 app.py instead. Retain the existing Marengo index to avoid re-embedding media.
+
+Differences from app.py match the stored database: legacy JSON casts,
+has_default_idxs=True, named indexes, and the non-retrying scene embedder, so
+scenes inserted through this file skip the retry. Delete this file only after
+scene_marengo is rebuilt with embed_video_retry.
 """
 
 from __future__ import annotations

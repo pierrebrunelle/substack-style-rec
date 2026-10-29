@@ -129,7 +129,7 @@ def _similarity_candidates(
                         if score <= 0:
                             continue
                         vid = r["id"]
-                        if vid not in all_candidates or score > (all_candidates[vid].get("score") or 0.0):
+                        if vid not in all_candidates or score > all_candidates[vid]["score"]:
                             all_candidates[vid] = r
 
                 if all_candidates:

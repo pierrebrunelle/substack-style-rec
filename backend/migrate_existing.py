@@ -28,7 +28,7 @@ def validate_plan(diffs):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--home", type=Path, required=True, help="Explicit Pixeltable home")
-    parser.add_argument("--apply", action="store_true", help="Apply metadata-only changes")
+    parser.add_argument("--apply", action="store_true", help="Apply the computed-expression updates")
     args = parser.parse_args()
     home = args.home.resolve()
     if not (home / "pgdata" / "PG_VERSION").is_file():
@@ -41,17 +41,18 @@ def main():
     import app_existing
 
     print(f"Target: {home}; namespace: {config.APP_NAMESPACE}")
+    print("Opening this home can upgrade its Pixeltable metadata. Back it up before --apply.")
     base = app_existing.TableModel
     diffs = base.get_model_diff(config.APP_NAMESPACE)
-    validate_plan(diffs)
     base.diff_all(config.APP_NAMESPACE)
+    validate_plan(diffs)
     if not args.apply:
-        print("Dry run only. Pass --apply after verifying the target and backup.")
+        print("Plan only: no schema change was applied. Pass --apply after verifying the target and backup.")
         return
     base.update_all(config.APP_NAMESPACE, allow_destructive=False)
     remaining = base.get_model_diff(config.APP_NAMESPACE)
     if any(d.resolution != "up_to_date" for d in remaining.values()):
-        raise RuntimeError("Schema reconciliation incomplete; do not deploy")
+        raise RuntimeError("Schema reconciliation incomplete; re-run, or restore the backup")
     print("Schema adopted; existing rows and embedding indexes were not recomputed.")
 
 

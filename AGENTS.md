@@ -28,6 +28,8 @@ uv run main.py                                   # Start FastAPI on :8000
 # namespaces in that home (entire embedded DB), not just this repo — use per-project PIXELTABLE_HOME=./data.
 ```
 
+Existing 0.6.x homes: never run `pxt schema update app.py`, `load.py`, or `--drop-dir` against them. Use `app_existing.py` and `migrate_existing.py` instead (see README).
+
 Focused checks use Node's built-in test runner and Python's unittest:
 
 ```bash

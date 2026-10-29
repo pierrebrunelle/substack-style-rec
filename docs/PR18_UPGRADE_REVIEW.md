@@ -108,10 +108,6 @@ Before deployment:
 5. Only after approval, upgrade production and run the compatibility migration
    against its explicitly selected home. Do not reload data or replace indexes.
 
-PR head was rechecked as `67abbdf`, OPEN and MERGEABLE. Its Vercel status still
-fails with an authorization URL; this is not evidence of a successful frontend
-build. The fixes in this report are local and have not been added to the PR.
-
 No merge, push, deployment, production migration, or missing-vector repair was
 performed. This validates the existing-data migration path, not a complete
 production rollout or the provider-dependent new-ingestion path.
