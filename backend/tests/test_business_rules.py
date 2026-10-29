@@ -111,11 +111,24 @@ class SceneVectorFallbackTest(unittest.TestCase):
         self.assertIn("string", scene.call_args.kwargs)
         title.assert_not_called()
 
-    def test_missing_and_negative_vector_scores_fall_back_to_title(self):
-        rows = [video("null", "creator") | {"score": None}, video("negative", "creator", -0.1)]
+    def test_null_score_falls_back_to_title(self):
+        rows = [video("null", "creator") | {"score": None}]
         result, _, title = self.query(rows, [video("zero", "creator", 0.0)])
         self.assertEqual(result[0]["id"], "title-result")
         title.assert_called_once()
+
+    def test_negative_score_falls_back_to_title(self):
+        rows = [video("negative", "creator", -0.1)]
+        result, _, title = self.query(rows, [video("zero", "creator", 0.0)])
+        self.assertEqual(result[0]["id"], "title-result")
+        title.assert_called_once()
+
+    def test_null_score_is_ignored_next_to_positive_vector(self):
+        positive = video("positive", "creator", 0.9)
+        result, scene, title = self.query([video("null", "creator") | {"score": None}, positive], [])
+        self.assertEqual(result, [positive])
+        self.assertEqual(scene.call_count, 1)
+        title.assert_not_called()
 
     def test_positive_vectors_keep_video_path_and_exclude_zero_scores(self):
         positive = video("positive", "creator", 0.9)

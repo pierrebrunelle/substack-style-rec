@@ -29,7 +29,8 @@ async def lifespan(app: FastAPI):
         logger.warning(
             "Pixeltable schema not initialized. "
             "Run 'pxt schema update app.py substack_rec && uv run load.py' first. "
-            "The server will start but API calls will fail."
+            "The server will start but API calls will fail. "
+            "On an existing 0.6.x database, do not run these; see README 'Existing 0.6.x database'."
         )
     yield
 
